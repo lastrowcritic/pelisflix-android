@@ -1,0 +1,254 @@
+/* Handheld styles are deliberately gated by native device identity. None of
+   these rules apply to a TV, even when it reports a small CSS viewport. */
+html[data-device="touch"]{--rail:0px;--gutter:20px;font-size:16px;touch-action:manipulation}
+html[data-device="touch"] body{overscroll-behavior:none}
+html[data-device="touch"] .app-shell{height:100dvh}
+html[data-device="touch"] .main-scroll{height:calc(100dvh - 72px);margin-left:0;scroll-behavior:auto;overscroll-behavior-y:contain}
+html[data-device="touch"] .navigation,html[data-device="touch"] .navigation:focus-within{inset:auto 0 0;width:100%;height:72px;padding:6px 12px 8px;background:#17191ff7;border:0;border-top:1px solid #ffffff0c;border-radius:0;box-shadow:none;overflow:visible}
+html[data-device="touch"] .brand{display:none}
+html[data-device="touch"] .nav-items{height:100%;display:flex;flex-direction:row;align-items:stretch;gap:4px}
+html[data-device="touch"] .nav-item{height:100%;flex:1;min-width:0;padding:6px 0;display:flex;flex-direction:column;justify-content:center;gap:5px;border-radius:12px;font-size:10px;font-weight:550;background:transparent;color:#999ca7;transform:none;outline:0;box-shadow:none}
+html[data-device="touch"] .nav-item span{display:block;opacity:1}
+html[data-device="touch"] .nav-item svg{width:21px;height:21px}
+html[data-device="touch"] .nav-item.selected{color:#f7f5fa;background:#ffffff0b}
+html[data-device="touch"] .nav-item[data-focus-id="nav-home"]{order:0}
+html[data-device="touch"] .nav-item[data-focus-id="nav-search"]{order:1}
+html[data-device="touch"] .nav-item[data-focus-id="nav-browse"]{order:2}
+html[data-device="touch"] .nav-item[data-focus-id="nav-library"]{order:5}
+html[data-device="touch"] .touch-more{order:7}
+html[data-device="touch"] .navigation .touch-secondary{display:none}
+html[data-device="touch"] .nav-item[data-focus-id="nav-categories"]{order:3}
+html[data-device="touch"] .nav-item[data-focus-id="nav-collections"]{order:4}
+html[data-device="touch"] .nav-item[data-focus-id="nav-settings"]{order:6}
+html[data-device="touch"] .tv-button{min-height:44px;padding:11px 16px;font-size:14px;white-space:normal;line-height:1.35;border-radius:10px}
+html[data-device="touch"] .tv-button:focus{outline:0;box-shadow:none;background:#ffffff14}
+html[data-device="touch"] .tv-button.primary,html[data-device="touch"] .tv-button.primary:focus{background:#eee9e4;color:#242229}
+html[data-device="touch"] .tv-button.active,html[data-device="touch"] .tv-button.active:focus{background:#38333f;border:1px solid #8b8297;color:white}
+html[data-device="touch"] button:focus-visible,html[data-device="touch"] input:focus-visible{outline:2px solid #ede7f1;outline-offset:2px}
+html[data-device="touch"] .media-card:focus .card-art::after,html[data-device="touch"] .category-card:focus::before,html[data-device="touch"] .collection-card:focus::before,html[data-device="touch"] .genre-tile:focus::before{border-color:transparent}
+html[data-device="touch"] input{font-size:16px;min-height:44px;padding:12px 14px}
+html[data-device="touch"] .page,html[data-device="touch"] .categories-page{padding:24px var(--gutter) 28px;min-height:100%;background:none}
+html[data-device="touch"] .page-title{margin-bottom:22px}
+html[data-device="touch"] .page-title h1{font-size:28px;line-height:1.2;letter-spacing:-.9px}
+html[data-device="touch"] .page-title>p{font-size:14px}
+html[data-device="touch"] .home-screen{padding-bottom:24px}
+html[data-device="touch"] .hero{min-height:440px;height:auto;max-height:none}
+html[data-device="touch"] .hero-art{object-position:center top}
+html[data-device="touch"] .hero-shade,html[data-device="touch"] .detail-hero .hero-shade{background:linear-gradient(0deg,#111216 0%,#111216ed 30%,#11121645 80%,#11121630 100%)}
+html[data-device="touch"] .hero-content{max-width:660px;padding:190px var(--gutter) 36px}
+html[data-device="touch"] .hero h1{font-size:34px;letter-spacing:-1.1px;line-height:1.1}
+html[data-device="touch"] .hero .hero-description{font-size:14px;line-height:1.5;max-width:520px;margin-bottom:18px;-webkit-line-clamp:2}
+html[data-device="touch"] .hero-meta{font-size:12px;gap:8px 12px;margin:12px 0}
+html[data-device="touch"] .hero-corner{display:none}
+html[data-device="touch"] .home-shelves{padding-top:0;margin-top:0;padding-bottom:0}
+html[data-device="touch"] .shelf{margin-bottom:20px}
+html[data-device="touch"] .shelf-title{padding:0 var(--gutter);margin-bottom:4px;gap:10px}
+html[data-device="touch"] .shelf-title h2{font-size:20px;letter-spacing:-.4px}
+html[data-device="touch"] .shelf-track,html[data-device="touch"] .genre-track{margin:0;padding:12px var(--gutter) 16px;gap:14px;scroll-padding-inline:var(--gutter);contain:layout;overscroll-behavior-x:contain}
+html[data-device="touch"] .media-card,html[data-device="touch"] .media-card.portrait{width:136px;min-width:0}
+html[data-device="touch"] .media-card .card-art{height:auto;aspect-ratio:2/3;border-radius:10px}
+html[data-device="touch"] .card-copy{padding:9px 1px 0;gap:4px}
+html[data-device="touch"] .card-copy strong{font-size:13px;line-height:1.4}
+html[data-device="touch"] .card-copy>span{font-size:11px;line-height:1.5}
+html[data-device="touch"] .imdb-badge{top:8px;right:8px;padding:5px 6px;gap:5px;font-size:12px;box-shadow:none}
+html[data-device="touch"] .imdb-badge b{font-size:8px}
+html[data-device="touch"] .media-grid,html[data-device="touch"] .search-results .media-grid,html[data-device="touch"] .history-grid,html[data-device="touch"] .downloads-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:22px 14px;padding:0;margin:0}
+html[data-device="touch"] .media-grid .media-card,html[data-device="touch"] .history-grid .media-card,html[data-device="touch"] .downloads-grid .media-card{width:100%}
+html[data-device="touch"] .genre-tile{width:168px;height:126px;min-height:126px;padding:16px;font-size:18px}
+html[data-device="touch"] .category-grid{grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:14px;padding:0;margin:0}
+html[data-device="touch"] .category-card{padding:14px;border-radius:12px;box-shadow:none}
+html[data-device="touch"] .category-card span{font-size:17px}
+html[data-device="touch"] .categories-tools{display:block;margin-bottom:20px}
+html[data-device="touch"] .category-count{display:none}
+html[data-device="touch"] .category-kind-tabs{gap:8px;padding:2px 0 6px}
+html[data-device="touch"] .category-kind-tabs .tv-button{min-height:44px;padding:10px 13px;font-size:13px;white-space:nowrap}
+html[data-device="touch"] .collection-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:0}
+html[data-device="touch"] .collection-card{aspect-ratio:1.05}
+html[data-device="touch"] .collection-card>div{padding:13px}
+html[data-device="touch"] .collection-card h2{font-size:15px;line-height:1.25}
+html[data-device="touch"] .collection-card p{font-size:11px;margin-top:6px}
+html[data-device="touch"] .collections-toolbar{display:block;margin-bottom:16px;padding:0}
+html[data-device="touch"] .collections-toolbar .chip-row{overflow-x:auto;padding:2px 0 6px;gap:8px;scrollbar-width:none}
+html[data-device="touch"] .collections-toolbar .tv-button{padding-inline:13px;white-space:nowrap}
+html[data-device="touch"] .collection-total{display:block;margin-top:6px;font-size:12px}
+html[data-device="touch"] .browse-controls{margin-bottom:18px}
+html[data-device="touch"] .browse-toolbar{padding:2px 0 6px;margin:0;gap:8px;scrollbar-width:none}
+html[data-device="touch"] .browse-toolbar .tv-button{white-space:nowrap;padding:11px 14px;font-size:13px}
+html[data-device="touch"] .filter-button{margin-left:0}
+html[data-device="touch"] .search-page{height:auto;min-height:100%;overflow:visible;display:block}
+html[data-device="touch"] .search-layout{display:block}
+html[data-device="touch"] .search-page .search-controls{height:auto;max-height:none;overflow:visible;padding:0;margin:0;position:sticky;top:0;background:#111216;z-index:8}
+html[data-device="touch"] .search-field{border:1px solid #ffffff20;background:#202229;border-radius:12px;gap:10px;padding:4px 12px;margin-bottom:24px}
+html[data-device="touch"] .search-field svg{width:20px;height:20px}
+html[data-device="touch"] .search-field input{min-width:0;width:100%;padding:10px 0;font-size:16px;outline:0}
+html[data-device="touch"] .search-field input::-webkit-search-cancel-button{display:none}
+html[data-device="touch"] .search-clear{width:44px;height:44px;flex-shrink:0;display:grid;place-items:center;background:none;color:#c1bec8}
+html[data-device="touch"] .keyboard-mode,html[data-device="touch"] .tv-keyboard,html[data-device="touch"] .keyboard-actions{display:none}
+html[data-device="touch"] .search-page .search-results{height:auto;min-height:0;overflow:visible;padding:0;margin:0}
+html[data-device="touch"] .search-results h2{font-size:18px;margin-bottom:18px}
+html[data-device="touch"] .detail-hero{min-height:0;overflow:visible}
+html[data-device="touch"] .detail-content{max-width:800px;padding:18px var(--gutter) 26px}
+html[data-device="touch"] .detail-content .back-button{margin-bottom:90px;font-size:13px;min-height:44px;padding:10px 14px}
+html[data-device="touch"] .detail-content h1{font-size:32px;line-height:1.12;letter-spacing:-.9px}
+html[data-device="touch"] .detail-content .original-title{font-size:14px;line-height:1.4;margin-top:6px}
+html[data-device="touch"] .detail-content .hero-meta{font-size:12px;gap:8px 12px;margin:14px 0}
+html[data-device="touch"] .detail-content .hero-description{font-size:14px;line-height:1.6;-webkit-line-clamp:3;margin-bottom:20px}
+html[data-device="touch"] .detail-content .action-row{gap:8px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+html[data-device="touch"] .detail-content .action-row .tv-button{width:100%;min-height:46px;padding:10px 12px;font-size:13px}
+html[data-device="touch"] .detail-content .resume-caption{grid-template-columns:auto minmax(0,1fr);font-size:12px}
+html[data-device="touch"] .resume-caption strong{grid-column:2;font-size:12px}
+html[data-device="touch"] .detail-body{padding:0 var(--gutter) 28px}
+html[data-device="touch"] .detail-section h2{font-size:20px;margin-bottom:14px}
+html[data-device="touch"] .episode-heading{align-items:start}
+html[data-device="touch"] .episode-heading .chip-row{max-width:52%;padding:2px 0 6px;margin:0}
+html[data-device="touch"] .episode-heading-copy p{display:block;font-size:12px}
+html[data-device="touch"] .episode-heading-copy p span{display:block;margin-top:4px}
+html[data-device="touch"] .episode-track{gap:14px;margin:0 calc(-1 * var(--gutter));padding:6px var(--gutter) 14px}
+html[data-device="touch"] .episode-card{width:216px}
+html[data-device="touch"] .episode-copy{padding-top:9px}
+html[data-device="touch"] .detail-section .chip-row,html[data-device="touch"] .detail-tabs{padding:2px 0 6px;margin:0;gap:8px;scrollbar-width:none}
+html[data-device="touch"] .detail-tabs{margin-bottom:24px;overflow-x:auto}
+html[data-device="touch"] .detail-more-modal{width:100%;height:100dvh;max-height:100dvh;padding:24px var(--gutter) 16px;overflow:hidden}
+html[data-device="touch"] .detail-more-header{padding-bottom:18px;flex-shrink:0}
+html[data-device="touch"] .detail-more-header h2{font-size:26px}
+html[data-device="touch"] .detail-more-original{font-size:14px}
+html[data-device="touch"] .detail-more-layout{display:block;overflow-y:auto;overscroll-behavior:contain;padding:0;scrollbar-width:none}
+html[data-device="touch"] .detail-more-summary,html[data-device="touch"] .detail-more-scroll{max-height:none;overflow:visible;padding:0;margin:0 0 26px}
+html[data-device="touch"] .detail-more-summary p{font-size:15px;line-height:1.7}
+html[data-device="touch"] .detail-facts>div{grid-template-columns:90px minmax(0,1fr);padding:10px 0;gap:16px;font-size:13px}
+html[data-device="touch"] .detail-more-footer{margin-top:0;padding-top:12px}
+html[data-device="touch"] .detail-more-footer .tv-button{width:100%;min-height:46px}
+html[data-device="touch"] .settings-list{max-width:800px}
+html[data-device="touch"] .settings-list section{padding:22px 0;margin-bottom:0}
+html[data-device="touch"] .settings-list section>h2{font-size:21px}
+html[data-device="touch"] .setting-row{flex-wrap:wrap;gap:14px;padding:20px 0;min-height:0}
+html[data-device="touch"] .setting-row>div:first-child{flex:1;min-width:180px}
+html[data-device="touch"] .setting-row h3{font-size:16px;line-height:1.4}
+html[data-device="touch"] .setting-row p,html[data-device="touch"] .mirror-form p,html[data-device="touch"] .settings-list .secondary{font-size:13px;line-height:1.6}
+html[data-device="touch"] .settings-list .tv-button{font-size:13px}
+html[data-device="touch"] .settings-list .chip-row{gap:8px;max-width:100%;overflow-x:auto;scrollbar-width:none}
+html[data-device="touch"] .mirror-input{display:flex;gap:8px}
+html[data-device="touch"] .mirror-input input{width:100%;min-width:0}
+html[data-device="touch"] .library-toolbar{display:block;padding:2px 0 6px;margin:0 0 22px;overflow-x:auto}
+html[data-device="touch"] .library-tabs{gap:8px;width:max-content;margin-bottom:8px}
+html[data-device="touch"] .library-actions{gap:8px}
+html[data-device="touch"] .library-tabs .tv-button{white-space:nowrap}
+html[data-device="touch"] .add-link-form{max-width:100%;gap:18px}
+html[data-device="touch"] .inline-confirm{flex-wrap:wrap;gap:10px}
+html[data-device="touch"] .inline-confirm p{width:100%;font-size:14px}
+html[data-device="touch"] .history-date{font-size:12px;line-height:1.6}
+html[data-device="touch"] .download-card>p{font-size:12px}
+html[data-device="touch"] .download-card .tv-button{font-size:12px;max-width:100%}
+html[data-device="touch"] .empty-state{padding:50px 12px;gap:16px}
+html[data-device="touch"] .empty-state h2{font-size:23px}
+html[data-device="touch"] .empty-state p{font-size:14px}
+html[data-device="touch"] .people-track{gap:16px}
+html[data-device="touch"] .person-card{width:112px}
+html[data-device="touch"] .person-card img{width:112px;height:144px}
+html[data-device="touch"] .person-heading{gap:18px}
+html[data-device="touch"] .person-heading .page-title h1{font-size:25px}
+html[data-device="touch"] .person-heading>img{width:82px;height:105px}
+html[data-device="touch"] .schedule-table{font-size:12px;table-layout:fixed;width:100%}
+html[data-device="touch"] .schedule-table th,html[data-device="touch"] .schedule-table td{padding:12px 6px;overflow-wrap:anywhere}
+html[data-device="touch"] .schedule-table thead{position:static}
+html[data-device="touch"] .comment{padding:16px;overflow-wrap:anywhere}
+html[data-device="touch"] .comment header{flex-wrap:wrap;gap:8px}
+html[data-device="touch"] .comment p{font-size:14px;line-height:1.6}
+html[data-device="touch"] .modal-backdrop{padding:16px;background:#000a;backdrop-filter:none}
+html[data-device="touch"] .modal{max-width:100%;max-height:calc(100dvh - 32px);width:520px;padding:24px;border-radius:18px;overflow-y:auto}
+html[data-device="touch"] .modal h2{font-size:23px;line-height:1.25}
+html[data-device="touch"] .modal>p{font-size:14px;line-height:1.6}
+html[data-device="touch"] .modal .action-row{gap:8px}
+html[data-device="touch"] .picker-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-height:60dvh;padding:2px}
+html[data-device="touch"] .picker-grid .tv-button{text-align:left;font-size:13px}
+html[data-device="touch"] .detail-more-backdrop{padding:0;background:#111216}
+html[data-device="touch"] .modal.detail-more-modal{width:100%;height:100dvh;max-height:none;border-radius:0;padding:24px var(--gutter) 16px}
+html[data-device="touch"] .touch-menu-backdrop{align-items:end;padding:16px 16px 84px}
+html[data-device="touch"] .touch-menu{width:100%;padding:22px}
+html[data-device="touch"] .touch-menu .picker-heading{margin-bottom:10px}
+html[data-device="touch"] .touch-menu-item{display:flex;align-items:center;gap:16px;width:100%;min-height:56px;text-align:left;color:#f4f0f6;font-size:16px;background:none;border-top:1px solid #ffffff0b}
+html[data-device="touch"] .loading-card{min-height:220px;padding:28px 20px;max-width:100%;border-radius:20px}
+html[data-device="touch"] .loading-card strong{font-size:21px}
+html[data-device="touch"] .loading-caption{font-size:14px}
+html[data-device="touch"] .player-ui{padding:20px}
+html[data-device="touch"] .player-heading{gap:12px}
+html[data-device="touch"] .player-heading h2{font-size:18px}
+html[data-device="touch"] .player-heading p{font-size:12px}
+html[data-device="touch"] .player-bottom{left:20px;right:20px;bottom:20px}
+html[data-device="touch"] .player-actions{gap:8px;flex-wrap:wrap}
+html[data-device="touch"] .player-actions .tv-button{padding:10px 12px;font-size:12px}
+html[data-device="touch"] .player-settings-backdrop{padding:16px}
+html[data-device="touch"] .player-settings{width:340px;max-height:calc(100dvh - 32px);padding:20px}
+@media(min-width:760px){
+  html[data-device="touch"]{--rail:84px;--gutter:28px}
+  html[data-device="touch"] .main-scroll{margin-left:84px;height:100dvh}
+  html[data-device="touch"] .navigation,html[data-device="touch"] .navigation:focus-within{inset:0 auto 0 0;width:84px;height:100dvh;padding:18px 9px;border:0;border-right:1px solid #ffffff0b}
+  html[data-device="touch"] .brand{display:flex;justify-content:center;height:38px;margin:0 0 20px}
+  html[data-device="touch"] .brand-mark{width:32px;height:32px}
+  html[data-device="touch"] .nav-items{height:auto;flex-direction:column;gap:6px}
+  html[data-device="touch"] .nav-item{height:62px;flex:none;font-size:10px;gap:6px}
+  html[data-device="touch"] .navigation .touch-secondary{display:flex}
+  html[data-device="touch"] .touch-more{display:none}
+  html[data-device="touch"] .hero{min-height:350px}
+  html[data-device="touch"] .hero-content{padding:80px var(--gutter) 36px;max-width:650px}
+  html[data-device="touch"] .hero h1{font-size:42px}
+  html[data-device="touch"] .hero-shade,html[data-device="touch"] .detail-hero .hero-shade{background:linear-gradient(90deg,#111216f2 0%,#111216b0 46%,#11121608 100%),linear-gradient(0deg,#111216,transparent 85%)}
+  html[data-device="touch"] .media-card,html[data-device="touch"] .media-card.portrait{width:152px}
+  html[data-device="touch"] .media-grid,html[data-device="touch"] .search-results .media-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:26px 18px}
+  html[data-device="touch"] .collection-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+  html[data-device="touch"] .collection-card{aspect-ratio:1.6}
+  html[data-device="touch"] .category-grid{grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:18px}
+  html[data-device="touch"] .detail-content{padding-top:22px;max-width:740px}
+  html[data-device="touch"] .detail-content .back-button{margin-bottom:40px}
+  html[data-device="touch"] .detail-content h1{font-size:40px}
+  html[data-device="touch"] .detail-content .action-row{display:flex;flex-wrap:wrap}
+  html[data-device="touch"] .detail-content .action-row .tv-button{width:auto;padding-inline:16px}
+  html[data-device="touch"] .collections-toolbar{display:flex;justify-content:space-between}
+  html[data-device="touch"] .collections-toolbar .chip-row{flex-shrink:0}
+  html[data-device="touch"] .collection-total{margin:0}
+}
+@media(min-width:760px) and (min-height:600px){
+  html[data-device="touch"] .detail-more-layout{display:grid;grid-template-columns:1fr 1fr;overflow:hidden;gap:30px}
+  html[data-device="touch"] .detail-more-summary,html[data-device="touch"] .detail-more-scroll{max-height:100%;overflow-y:auto;padding-right:12px}
+}
+@media(max-height:500px) and (min-width:600px){
+  html[data-device="touch"] .hero-content{padding-top:60px}
+  html[data-device="touch"] .hero{min-height:300px}
+  html[data-device="touch"] .detail-content .back-button{margin-bottom:24px}
+  html[data-device="touch"] .detail-more-header{padding-bottom:12px}
+  html[data-device="touch"] .modal.detail-more-modal{padding-top:18px}
+  html[data-device="touch"] .detail-more-header h2{font-size:23px}
+  html[data-device="touch"] .navigation,html[data-device="touch"] .navigation:focus-within{padding-block:8px}
+  html[data-device="touch"] .brand{display:none}
+  html[data-device="touch"] .nav-items{gap:3px}
+  html[data-device="touch"] .nav-item{height:45px;gap:3px;font-size:9px}
+  html[data-device="touch"] .nav-item svg{width:19px;height:19px}
+}
+html[data-device="touch"] .search-busy{flex-shrink:0;color:#c6becf}
+html[data-device="touch"] .app-shell:has(.modal-backdrop)>.main-scroll{overflow-y:hidden}
+html[data-device="touch"] .touch-season-picker{position:relative;flex-shrink:0;align-self:center;display:block;max-width:52%;border:1px solid #ffffff20;border-radius:10px;background:#202229}
+html[data-device="touch"] .touch-season-picker select{appearance:none;display:block;width:100%;min-height:44px;padding:10px 38px 10px 14px;border:0;border-radius:10px;background:transparent;color:#f1edf4;font:inherit;font-size:14px}
+html[data-device="touch"] .touch-season-picker svg{position:absolute;right:12px;top:13px;pointer-events:none;color:#b8b3c1}
+html[data-device="touch"] .touch-season-picker option{background:#202229;color:#f1edf4}
+html[data-device="touch"] .navigation:focus-within .nav-item span{display:block;opacity:1}
+@media(min-width:760px){
+  html[data-device="touch"] .touch-menu-backdrop{align-items:center;padding:16px}
+  html[data-device="touch"] .touch-menu{width:min(460px,100%)}
+}
+@media(min-width:760px) and (max-height:500px){
+  html[data-device="touch"] .navigation .touch-secondary{display:none}
+  html[data-device="touch"] .navigation .touch-more{display:flex}
+}
+html[data-device="touch"] .sync-form{display:grid;gap:14px;max-width:560px}
+html[data-device="touch"] .sync-form label{display:grid;gap:7px;color:#c9bfce;font-size:14px}
+html[data-device="touch"] .sync-form input{width:100%;min-height:48px;padding:12px 14px;border:1px solid #ffffff24;border-radius:10px;background:#ffffff0c;color:#f5f1f5;font-size:16px}
+html[data-device="touch"] .sync-account{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+html[data-device="touch"] .sync-account p,html[data-device="touch"] .sync-status,html[data-device="touch"] .sync-error{font-size:14px;color:#c9bfce}
+html[data-device="touch"] .sync-error{color:#ffb8b8}
+html[data-device="touch"] .sync-form .action-row{gap:10px;flex-wrap:wrap}
+html[data-device="tv"] .sync-form{display:grid;gap:12px;max-width:520px}
+html[data-device="tv"] .sync-form label{display:grid;gap:6px;color:#c9bfce}
+html[data-device="tv"] .sync-form input{min-height:48px;padding:12px 14px;border:1px solid #ffffff24;border-radius:10px;background:#ffffff0c;color:#f5f1f5;font-size:16px}
+html[data-device="tv"] .sync-account{display:flex;align-items:center;gap:18px}
+html[data-device="tv"] .sync-status,html[data-device="tv"] .sync-error{font-size:14px;color:#c9bfce}
+html[data-device="tv"] .sync-error{color:#ffb8b8}
