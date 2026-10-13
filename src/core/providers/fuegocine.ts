@@ -1,21 +1,26 @@
 import type { Catalogue, Item, Selection, Source } from '../types';
-import type { Attempt, Provider, ProviderHost } from './types';
-import { InvalidCatalogue } from '../mirrors';
+import type { Attempt, DetailOptions, Provider, ProviderHost } from './types';
+import { HTTPFailure, InvalidCatalogue } from '../mirrors';
+import { castellano } from '../audio';
 import { chooseAudio } from './paging';
 import { resolveVoe } from './players';
 import { fuegoMedia, fuegoOkruURL, fuegoUnlimplayURL, fuegoVoeURL, fuegoWrappedVideo, fuegocineBase } from './fuegocine-policy';
-import { feedURL, fuegoCategories, fuegoDirect, fuegoGenres, parseFeed, parseFuegoCard, parseFuegoDetails, parseFuegoEpisodes, parseFuegoLinks, fuegoAudio, parseOkru, parseUnlimplay } from './fuegocine-parse';
-import type { FeedEntry } from './fuegocine-parse';
+import { feedURL, fuegoCategories, fuegoDirect, fuegoGenres, fuegoSpanish, fuegoUnlimplay, parseFeed, parseFuegoCard, parseFuegoDetails, parseFuegoEpisodes, parseFuegoLinks, fuegoAudio, parseOkru, parseUnlimplay, unlimplayOffers } from './fuegocine-parse';
+import type { FeedEntry, FuegoLink } from './fuegocine-parse';
+import { SpanishAnswers } from './fuegocine-spanish';
 
 const pageSize = 30;
 // unlimplay sends its headers at once but holds the page back for up to about 16 seconds, longer than the usual wait.
 const slowPlayerWait = 45000;
+// Checking a title for Spanish waits less. A page that is slower than this is left unchecked rather than holding up a whole list.
+const checkWait = 20000;
 // The app asks for the same roots whichever source is used. Each root is a label on the blog.
 const rootLabels: Record<string, string> = { films: 'Movie', series: 'Serie', cartoons: 'Animación', animation: 'Animación' };
 
 export class FuegocineProvider implements Provider {
   readonly id = 'fuegocine' as const;
   private labelList?: Promise<string[]>;
+  private spanish = new SpanishAnswers();
   constructor(private host: ProviderHost) {}
   // The label list is only used to name the categories and to turn a readable address back into a label, so a failure is not fatal.
   private labels(): Promise<string[]> {
@@ -52,36 +57,80 @@ export class FuegocineProvider implements Provider {
     if (!entry) { this.host.forget(feedURL({ path: new URL(page).pathname })); throw new Error('This title is no longer available on the source.'); }
     return entry;
   }
-  async details(item: Item): Promise<Item> {
+  async details(item: Item, options: DetailOptions = {}): Promise<Item> {
     const entry = await this.post(item.page!);
-    let detailed = parseFuegoDetails(entry, item);
+    let detailed = parseFuegoDetails(entry, item), link = fuegoUnlimplay(parseFuegoLinks(entry.content?.$t || ''));
     if (detailed.isSeries) {
       const postId = entry.id?.$t.match(/post-(\d+)$/)?.[1];
       if (postId) {
-        const response = await this.host.request(feedURL({ labels: ['Episode', `id-${postId}`], size: 500 }), undefined, undefined, 30000), { seasons, audio } = parseFuegoEpisodes(parseFeed(response.text).entries);
-        // The series post itself lists no servers, so the audio shown comes from its first episode.
+        const response = await this.host.request(feedURL({ labels: ['Episode', `id-${postId}`], size: 500 }), undefined, undefined, 30000), { seasons, audio, unlimplay } = parseFuegoEpisodes(parseFeed(response.text).entries);
+        // The series post itself lists no servers, so the audio shown comes from its first episode, and so does the page that can offer Spanish.
         detailed = { ...detailed, seasons, translators: audio.length ? audio : detailed.translators };
+        link = unlimplay;
       }
     }
-    return detailed;
+    return this.withSpanish(detailed, link, item.page!, !!options.castellano);
+  }
+  // The posts never list Castellano, but the unlimplay page of a title can offer it. Opening that page is slow, so it is only done when
+  // asked for, and every answer is kept. What is already known is used either way. With the check on, Castellano is the audio to start with.
+  private async withSpanish(detailed: Item, link: FuegoLink | undefined, page: string, check: boolean): Promise<Item> {
+    let translators = detailed.translators || [], pending = false;
+    if (link && !translators.some(t => t.id === castellano)) {
+      const found = this.spanish.get(link.url) ?? (check ? await this.look(link.url, page) : undefined);
+      if (found) translators = fuegoSpanish(translators, link);
+      pending = check && found === undefined;
+    }
+    if (check && translators.some(t => t.id === castellano)) translators = translators.map(t => ({ ...t, selected: t.id === castellano }));
+    return { ...detailed, translators, ...(pending ? { audioPending: true } : {}) };
+  }
+  // One read of the page. Yes or no once it answered, gone when unlimplay does not have the title (it says so at once), undefined when it could not be read.
+  private async ask(url: string, page: string): Promise<'yes' | 'no' | 'gone' | undefined> {
+    try {
+      const response = await this.host.request(url, undefined, page, checkWait), offers = fuegoUnlimplayURL(response.url) ? unlimplayOffers(response.text, castellano) : undefined;
+      return offers === undefined ? undefined : offers ? 'yes' : 'no';
+    } catch (error) {
+      return error instanceof HTTPFailure && error.status === 404 ? 'gone' : undefined;
+    }
+  }
+  // True or false once the page answered, undefined when it could not be read, which is not kept so it is tried again later.
+  // unlimplay sometimes serves a page that leaves a language out and has it on the next request, so a page without Spanish is read a second time.
+  private async look(url: string, page: string): Promise<boolean | undefined> {
+    let answer = await this.ask(url, page);
+    if (answer === 'no') answer = await this.ask(url, page);
+    const found = answer === undefined ? undefined : answer === 'yes';
+    if (found !== undefined) this.spanish.set(url, found);
+    return found;
   }
   async attempts(item: Item, selection: Selection): Promise<Attempt[]> {
     let audio = item.translators || [];
     if (item.isSeries) {
       const episode = item.seasons?.find(s => s.id === selection.season)?.episodes.find(e => e.id === selection.episode);
       if (!episode?.page) throw new Error('Choose a season and episode.');
-      audio = fuegoAudio(parseFuegoLinks((await this.post(episode.page)).content?.$t || ''));
+      const links = parseFuegoLinks((await this.post(episode.page)).content?.$t || '');
+      audio = fuegoAudio(links);
+      // This episode may have a Spanish option of its own. If it does not, the page says so when it is opened.
+      if (selection.translator === castellano) audio = fuegoSpanish(audio, fuegoUnlimplay(links));
     }
     const translator = chooseAudio(audio, selection);
     return translator.sources!.map(option => () => this.resolve(option.url, item.page!, translator.id));
+  }
+  // Spanish was found on this page when the title was checked, but the page can leave it out once, so it is read again before giving up.
+  private async unlimplay(url: string, page: string, audio: string, again: boolean): Promise<{ voe: string; base: string }> {
+    const response = await this.host.request(url, undefined, page, slowPlayerWait);
+    try {
+      return { voe: parseUnlimplay(response.text, response.url, audio), base: response.url };
+    } catch (error) {
+      if (again) return this.unlimplay(url, page, audio, false);
+      throw error;
+    }
   }
   private async resolve(url: string, page: string, audio: string): Promise<Source> {
     const direct = fuegoWrappedVideo(url);
     if (direct) return fuegoDirect(direct);
     if (fuegoOkruURL(url)) { const response = await this.host.request(url, undefined, page); return parseOkru(response.text, response.url); }
     if (fuegoUnlimplayURL(url)) {
-      const response = await this.host.request(url, undefined, page, slowPlayerWait), voe = parseUnlimplay(response.text, response.url, audio);
-      return resolveVoe(this.host, voe, response.url, fuegoMedia);
+      const { voe, base } = await this.unlimplay(url, page, audio, audio === castellano);
+      return resolveVoe(this.host, voe, base, fuegoMedia);
     }
     if (fuegoVoeURL(url)) return resolveVoe(this.host, url, page, fuegoMedia);
     throw new Error('This video server is not supported yet.');

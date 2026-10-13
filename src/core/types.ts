@@ -12,6 +12,8 @@ export interface Item {
   translators?: Translator[]; seasons?: Season[]; isSeries?: boolean;
   // Audio ids (latino, castellano, subtitulado) read from a listing or a details page. Absent when not known yet.
   audio?: string[];
+  // Set when a check of the audio was asked for but could not finish. The audio is then still unknown, so a filter keeps the title.
+  audioPending?: boolean;
   actors?: Link[]; directors?: Link[]; collections?: Link[]; rankings?: Link[];
   information?: Record<string, string>; franchise?: Link[]; franchiseTitle?:string;
   rezkaID?:string; ratings?:{name:string;value:string;url?:string}[];

@@ -1,12 +1,14 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { ContentSource } from '../src/core/source';
 import { defaults } from '../src/core/store';
 import { defaultMirror } from '../src/core/pelisflix';
 import { InvalidCatalogue } from '../src/core/mirrors';
+import { discoverable } from '../src/core/visibility';
+import { SpanishAnswers } from '../src/core/providers/fuegocine-spanish';
 import { mediaPolicy, providerIdOf, sourceAllowed } from '../src/core/providers/policy';
 import { fuegoAllowed, fuegoContentURL, fuegoDirectVideo, fuegoMedia, fuegoOkruURL, fuegoReferer, fuegoUnlimplayURL, fuegoVoeURL, fuegoWrappedVideo, fuegocineBase } from '../src/core/providers/fuegocine-policy';
-import { feedURL, fuegoAudio, fuegoCategories, fuegoDirect, fuegoGenres, fuegoID, parseFeed, parseFuegoCard, parseFuegoDetails, parseFuegoEpisodes, parseFuegoLinks, parseOkru, parseUnlimplay } from '../src/core/providers/fuegocine-parse';
+import { feedURL, fuegoAudio, fuegoCategories, fuegoDirect, fuegoGenres, fuegoID, fuegoSpanish, fuegoUnlimplay, parseFeed, parseFuegoCard, parseFuegoDetails, parseFuegoEpisodes, parseFuegoLinks, parseOkru, parseUnlimplay, unlimplayOffers } from '../src/core/providers/fuegocine-parse';
 import type { FeedEntry } from '../src/core/providers/fuegocine-parse';
 import type { Item } from '../src/core/types';
 
@@ -27,6 +29,12 @@ function voePayload(data: object) {
 }
 const voeStream = `https://cdn-test.cloudwindow-route.com/engine/hls2-c/01/1/${voeId}/master.m3u8?t=TestToken`;
 const voeEmbed = `<html><body><script type="application/json">${JSON.stringify([voePayload({ source: voeStream })])}</script></body></html>`;
+// The saved unlimplay page only lists Latino. This gives it the Spanish option too, the way the site does for some titles.
+const serverList = /const\s+EMBEDS\s*=\s*(\{[^\n]*\})\s*;/;
+function withSpanish(page: string) {
+  const list = JSON.parse(page.match(serverList)![1]);
+  return page.replace(serverList, () => `const EMBEDS = ${JSON.stringify({ ...list, 'español': list.latino })};`);
+}
 
 describe('Fuegocine feed', () => {
   it('reads the entries, the labels and the total of a feed', () => {
@@ -102,6 +110,18 @@ describe('Fuegocine titles', () => {
     expect(audio[1].sources!.map(s => s.name)).toEqual(['FC', 'UA', 'OK']);
     expect(audio[0].sources![0].name).toBe('Voe');
   });
+  it('offers a Spanish option from the unlimplay link of a post, unless the post lists Castellano itself', () => {
+    const links = parseFuegoLinks(feed('movie').entries[0].content!.$t), latino = fuegoAudio(links), link = fuegoUnlimplay(links)!;
+    expect(link.url).toBe('https://unlimplay.com/f/embed/movie/1327819');
+    const offered = fuegoSpanish(latino, link);
+    expect(offered.map(t => [t.id, t.name, t.selected])).toEqual([['latino', 'Latino', true], ['castellano', 'Castellano', false]]);
+    expect(offered[1].sources).toEqual([{ url: link.url, name: 'UA' }]);
+    expect(fuegoSpanish([], link)[0].selected).toBe(true);
+    expect(fuegoSpanish(latino, undefined)).toBe(latino);
+    const listed = fuegoAudio([{ lang: 'es', name: 'Voe', url: 'https://voe.sx/e/abc123' }]);
+    expect(fuegoSpanish(listed, link)).toBe(listed);
+    expect(fuegoUnlimplay([{ lang: 'lat', name: 'Other', url: 'https://example.com/x' }, { lang: 'lat', name: 'FC', url: 'https://voe.sx/e/abc123' }])).toBeUndefined();
+  });
   it('lists the seasons and episodes of a series from its episode posts', () => {
     const { seasons, audio } = parseFuegoEpisodes(feed('episodes').entries);
     expect(seasons).toHaveLength(1);
@@ -111,6 +131,8 @@ describe('Fuegocine titles', () => {
     expect(seasons[0].episodes[2].image).toMatch(/^https:\/\/image\.tmdb\.org|themoviedb\.org/);
     expect(audio[0]).toMatchObject({ id: 'latino', name: 'Latino' });
     expect(audio[0].sources!.some(s => /unlimplay/.test(s.url))).toBe(true);
+    // The first episode's unlimplay link is what tells whether the series has a Spanish option.
+    expect(parseFuegoEpisodes(feed('episodes').entries).unlimplay?.url).toBe('https://unlimplay.com/play/embed/tv/284833/1/1');
     expect(parseFuegoEpisodes([])).toEqual({ seasons: [], audio: [] });
   });
 });
@@ -147,6 +169,42 @@ describe('Fuegocine players', () => {
     expect(() => parseUnlimplay(late, url, 'castellano')).toThrow('selected audio');
     expect(() => parseUnlimplay(late.replace('https://voe.sx/e/' + voeId, 'https://evil.example/e/x'), url, 'latino')).toThrow('not supported');
     expect(() => parseUnlimplay(page.replace(/const\s+EMBEDS\s*=\s*\{[^\n]*\}\s*;/, 'const EMBEDS = [];'), url, 'latino')).toThrow('playable');
+  });
+  it('tells whether the unlimplay page offers an audio, in either version of the page', () => {
+    const page = text('unlimplay.html'), spanish = withSpanish(page), list = page.match(serverList)![1];
+    expect(unlimplayOffers(page, 'latino')).toBe(true);
+    expect(unlimplayOffers(page, 'castellano')).toBe(false);
+    expect(unlimplayOffers(spanish, 'castellano')).toBe(true);
+    const late = spanish.replace(serverList, 'const EMBEDS = [];') + `\n<script type="x-text/javascript">if(typeof finalizePlayer==="function"){finalizePlayer(${JSON.stringify({ 'español': JSON.parse(list).latino })});}</script>`;
+    expect(unlimplayOffers(late, 'castellano')).toBe(true);
+    // A Spanish option on a server the app cannot read is not an option.
+    expect(unlimplayOffers(spanish.replace(/https:\/\/voe\.sx\/e\/[A-Za-z0-9_-]+/g, 'https://evil.example/e/x'), 'castellano')).toBe(false);
+    // Spanish can sit under more than one name, and a name without a readable server does not hide another one that has it.
+    const split = page.replace(serverList, () => `const EMBEDS = ${JSON.stringify({ ...JSON.parse(list), 'español': { doodstream: 'https://doodstream.com/e/x' }, castellano: JSON.parse(list).latino })};`);
+    expect(unlimplayOffers(split, 'castellano')).toBe(true);
+    expect(parseUnlimplay(split, 'https://unlimplay.com/f/embed/movie/1327819', 'castellano')).toMatch(/^https:\/\/voe\.sx\//);
+    // A page that lists no servers at all says nothing either way.
+    expect(unlimplayOffers('<html></html>', 'castellano')).toBeUndefined();
+    expect(unlimplayOffers(page.replace(serverList, 'const EMBEDS = [];'), 'castellano')).toBeUndefined();
+  });
+});
+
+describe('Fuegocine Spanish answers', () => {
+  const day = 24 * 60 * 60 * 1000, url = 'https://unlimplay.com/f/embed/movie/1';
+  const memory = () => { const data = new Map<string, string>(); return { getItem: (k: string) => data.get(k) ?? null, setItem: (k: string, v: string) => { data.set(k, v); } }; };
+  afterEach(() => { vi.useRealTimers(); });
+  it('asks again sooner about a page that was seen without Spanish than about one that has it', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    const store = memory(), answers = new SpanishAnswers(store);
+    answers.set(url, true); answers.set(url + '2', false);
+    vi.setSystemTime(Date.now() + day);
+    expect([answers.get(url), answers.get(url + '2')]).toEqual([true, false]);
+    vi.setSystemTime(Date.now() + 2 * day);
+    expect([answers.get(url), answers.get(url + '2')]).toEqual([true, undefined]);
+    // A later session sees the same.
+    expect([new SpanishAnswers(store).get(url), new SpanishAnswers(store).get(url + '2')]).toEqual([true, undefined]);
+    vi.setSystemTime(Date.now() + 5 * day);
+    expect(answers.get(url)).toBeUndefined();
   });
 });
 
@@ -194,6 +252,8 @@ describe('Fuegocine address policy', () => {
 
 describe('Fuegocine through the content source', () => {
   afterEach(() => vi.unstubAllGlobals());
+  // What the app learned about a title's Spanish option is kept between sessions, so each test starts without it.
+  beforeEach(() => localStorage.clear());
   const settings = () => ({ ...structuredClone(defaults.settings), mirror: defaultMirror, source: 'fuegocine' as const });
   type Link = { lang: string; name: string; url: string };
   // The movie post with its servers replaced, so every player kind can be driven through the real checks.
@@ -202,7 +262,10 @@ describe('Fuegocine through the content source', () => {
     if (links) data.feed.entry[0].content.$t = data.feed.entry[0].content.$t.replace(/const _SV_LINKS = \[[\s\S]*?\n\s*\]\s*<\/script>/, `const _SV_LINKS = [${links.map(l => `{ lang: "${l.lang}", name: "${l.name}", url: "${l.url}" }`).join(',')}]\n</script>`);
     return data;
   }
-  function network(options: { links?: Link[]; mp4Status?: number } = {}) {
+  // `spanish` is what unlimplay answers: a Spanish option, only Latino, no such title (404) or a server error.
+  // `flaky` leaves Spanish out of every other read, starting with the first. `flaky-down` leaves it out once and then fails.
+  function network(options: { links?: Link[]; mp4Status?: number; spanish?: 'yes' | 'no' | 'gone' | 'down' | 'flaky' | 'flaky-down' } = {}) {
+    let reads = 0;
     const seen: { url: string; referer?: string; timeout?: number }[] = [], posts = [moviePost(options.links).feed.entry[0], ...feed('series').entries, ...feed('episodes').entries].map((entry: FeedEntry) => ({ entry, path: new URL(entry.link!.find(l => l.rel === 'alternate')!.href).pathname }));
     const json = (value: unknown, final: string) => new Response(typeof value === 'string' ? value : JSON.stringify(value), { headers: { 'X-Rezka-URL': final } });
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -221,7 +284,12 @@ describe('Fuegocine through the content source', () => {
           return json(text('home.json'), url);
         }
         if (address.hostname === 'ok.ru') return page(text('okru.html'));
-        if (address.hostname === 'unlimplay.com') return page(text('unlimplay.html'));
+        if (address.hostname === 'unlimplay.com') {
+          if (options.spanish === 'gone') return page('Not found', 404);
+          if (options.spanish === 'down' || (options.spanish === 'flaky-down' && reads++ > 0)) return page('Bad gateway', 502);
+          if (options.spanish === 'flaky') return page(reads++ % 2 === 1 ? withSpanish(text('unlimplay.html')) : text('unlimplay.html'));
+          return page(options.spanish === 'yes' ? withSpanish(text('unlimplay.html')) : text('unlimplay.html'));
+        }
         if (address.hostname === 'voe.sx') return page(voeEmbed);
         return page('Not found', 404);
       }
@@ -330,6 +398,107 @@ describe('Fuegocine through the content source', () => {
     const source = new ContentSource(settings()), detail = await source.details(movie);
     expect(detail.translators).toEqual([]);
     await expect(source.playback(detail, { translator: 'latino' })).rejects.toThrow();
+  });
+  const player = (seen: { url: string; referer?: string; timeout?: number }[]) => seen.filter(r => new URL(r.url).hostname === 'unlimplay.com');
+  it('leaves the unlimplay page alone while details are read for browsing', async () => {
+    const { seen } = network({ spanish: 'yes' }), source = new ContentSource(settings());
+    expect((await source.details(movie)).translators!.map(t => t.id)).toEqual(['latino']);
+    expect(player(seen)).toHaveLength(0);
+  });
+  it('checks the unlimplay page for a Spanish option when asked, and prefers it', async () => {
+    const { seen } = network({ spanish: 'yes' }), source = new ContentSource(settings());
+    const detail = await source.details(movie, { castellano: true });
+    expect(detail.translators!.map(t => [t.id, t.selected])).toEqual([['latino', false], ['castellano', true]]);
+    expect(detail.audioPending).toBeUndefined();
+    const [check] = player(seen);
+    expect(player(seen)).toHaveLength(1);
+    expect(check.url).toBe('https://unlimplay.com/f/embed/movie/1327819');
+    expect(check.referer).toBe(movie.page);
+    expect(check.timeout).toBeGreaterThanOrEqual(15000);
+    // The option plays: the Spanish list of the same page leads to the VOE stream.
+    const result = await source.playback(detail, { translator: 'castellano' });
+    expect(decodeURIComponent(result.streams[0].url)).toContain(voeStream);
+  });
+  it('remembers what it learned, for other screens and for the next session', async () => {
+    const { seen } = network({ spanish: 'yes' });
+    await new ContentSource(settings()).details(movie, { castellano: true });
+    expect(player(seen)).toHaveLength(1);
+    const later = await new ContentSource(settings()).details(movie, { castellano: true });
+    expect(later.translators!.map(t => t.id)).toEqual(['latino', 'castellano']);
+    // Without the check, a title already known to have it still offers it, but does not jump to it.
+    const plain = await new ContentSource(settings()).details(movie);
+    expect(plain.translators!.map(t => [t.id, t.selected])).toEqual([['latino', true], ['castellano', false]]);
+    expect(player(seen)).toHaveLength(1);
+  });
+  it('does not offer Castellano when the page only has Latino, and remembers that too', async () => {
+    const { seen } = network({ spanish: 'no' });
+    const detail = await new ContentSource(settings()).details(movie, { castellano: true });
+    expect(detail.translators!.map(t => t.id)).toEqual(['latino']);
+    expect(detail.audioPending).toBeUndefined();
+    // A page without Spanish is read a second time before that is believed.
+    expect(player(seen)).toHaveLength(2);
+    await new ContentSource(settings()).details(movie, { castellano: true });
+    expect(player(seen)).toHaveLength(2);
+  });
+  it('takes Spanish from the second read when the first page left it out', async () => {
+    const { seen } = network({ spanish: 'flaky' }), source = new ContentSource(settings());
+    const detail = await source.details(movie, { castellano: true });
+    expect(detail.translators!.map(t => [t.id, t.selected])).toEqual([['latino', false], ['castellano', true]]);
+    expect(player(seen)).toHaveLength(2);
+    // Playing reads the page again, which can leave Spanish out as well, so it asks once more instead of failing.
+    const result = await source.playback(detail, { translator: 'castellano' });
+    expect(decodeURIComponent(result.streams[0].url)).toContain(voeStream);
+    expect(player(seen)).toHaveLength(4);
+  });
+  it('does not take a page that was read once without Spanish as the answer when the second read fails', async () => {
+    const { seen } = network({ spanish: 'flaky-down' }), source = new ContentSource(settings());
+    expect(await source.details(movie, { castellano: true })).toMatchObject({ audioPending: true });
+    expect(player(seen)).toHaveLength(2);
+    // Nothing was kept, so the next look reads the page again. Its first read fails, so there is no second one.
+    await source.details(movie, { castellano: true });
+    expect(player(seen)).toHaveLength(3);
+  });
+  it('counts a title that unlimplay does not have as having no Spanish option', async () => {
+    const { seen } = network({ spanish: 'gone' }), source = new ContentSource(settings());
+    const detail = await source.details(movie, { castellano: true });
+    expect(detail.translators!.map(t => t.id)).toEqual(['latino']);
+    expect(detail.audioPending).toBeUndefined();
+    await new ContentSource(settings()).details(movie, { castellano: true });
+    expect(player(seen)).toHaveLength(1);
+  });
+  it('marks a check that failed as unfinished and tries it again the next time', async () => {
+    const { seen } = network({ spanish: 'down' }), source = new ContentSource(settings());
+    const detail = await source.details(movie, { castellano: true });
+    expect(detail).toMatchObject({ audioPending: true });
+    expect(detail.translators!.map(t => t.id)).toEqual(['latino']);
+    await source.details(movie, { castellano: true });
+    expect(player(seen)).toHaveLength(2);
+  });
+  it('checks a series through its first episode and plays the Spanish option of another episode', async () => {
+    const { seen } = network({ spanish: 'yes' }), source = new ContentSource(settings());
+    const detail = await source.details(show, { castellano: true });
+    expect(player(seen).map(r => r.url)).toEqual(['https://unlimplay.com/play/embed/tv/284833/1/1']);
+    expect(detail.translators!.map(t => [t.id, t.selected])).toEqual([['latino', false], ['castellano', true]]);
+    const result = await source.playback(detail, { translator: 'castellano', season: '1', episode: '3' });
+    expect(decodeURIComponent(result.streams[0].url)).toContain(voeStream);
+    expect(player(seen).at(-1)!.url).toBe('https://unlimplay.com/play/embed/tv/284833/1/3');
+    expect(await source.details(show, { castellano: true })).toBe(detail);
+  });
+  it('reports an episode that has no Spanish option when its audio is chosen anyway', async () => {
+    network({ spanish: 'no' });
+    const source = new ContentSource(settings()), detail = await source.details(show);
+    await expect(source.playback(detail, { translator: 'castellano', season: '1', episode: '3' })).rejects.toThrow('selected audio');
+  });
+  it('keeps only the Fuegocine titles whose page offers Castellano when the filter asks', async () => {
+    const card = parseFuegoCard(feed('movie').entries[0])!, rules = { excluded: [], castellano: true };
+    expect(card.audio).toBeUndefined();
+    network({ spanish: 'yes' });
+    const kept = await discoverable([card], rules, item => new ContentSource(settings()).details(item, { castellano: true }), new Map());
+    expect(kept.map(i => [i.id, i.audio])).toEqual([[card.id, ['latino', 'castellano']]]);
+    localStorage.clear(); network({ spanish: 'no' });
+    expect(await discoverable([card], rules, item => new ContentSource(settings()).details(item, { castellano: true }), new Map())).toEqual([]);
+    localStorage.clear(); network({ spanish: 'down' });
+    expect((await discoverable([card], rules, item => new ContentSource(settings()).details(item, { castellano: true }), new Map())).map(i => i.id)).toEqual([card.id]);
   });
   it('opens a saved title with its own source whichever source is active', async () => {
     const { seen } = network(), source = new ContentSource({ ...settings(), source: 'pelisflix' });

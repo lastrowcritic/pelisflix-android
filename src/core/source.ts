@@ -1,5 +1,5 @@
 import type { Catalogue, Collection, Comment, Item, ProviderId, Selection, Settings, Source } from './types';
-import type { Provider, ProviderHost, Reply } from './providers/types';
+import type { DetailOptions, Provider, ProviderHost, Reply } from './providers/types';
 import type { PelisflixProvider } from './providers/pelisflix';
 import { VerificationRequired, isChallenge } from './challenge';
 import { isNative, TV } from './native';
@@ -83,14 +83,19 @@ export class ContentSource {
     const id = this.active;
     return this.cached(`search:${id}:${term.toLocaleLowerCase('es')}:${page}`, async () => (await this.provider(id)).search(term, page));
   }
-  async details(item: Item): Promise<Item> {
+  async details(item: Item, options?: DetailOptions): Promise<Item> {
     if (!item.page) return item;
-    const saved = this.detailCache.get(item.page); if (saved && Date.now() - saved.time < 1800000) return saved.value;
-    const value = this.provider(providerIdOf(item.id)).then(provider => provider.details(item)).then(detailed => {
+    // A checked version does everything the plain one does, so it also replaces the plain one.
+    const slot = options?.castellano ? `${item.page}#castellano` : item.page, saved = this.detailCache.get(slot); if (saved && Date.now() - saved.time < 1800000) return saved.value;
+    const value = this.provider(providerIdOf(item.id)).then(provider => provider.details(item, options)).then(detailed => {
       if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('rezka-rating', { detail: { id: detailed.id, rating: detailed.ratings?.find(r => r.name === 'IMDb')?.value || null } }));
       return detailed;
     });
-    this.detailCache.set(item.page, { time: Date.now(), value }); value.catch(() => this.detailCache.delete(item.page!)); cacheLimit(this.detailCache, 100);
+    const slots = options?.castellano ? [slot, item.page] : [slot], entry = { time: Date.now(), value };
+    for (const key of slots) this.detailCache.set(key, entry);
+    // A failed check or one that could not finish is tried again the next time.
+    const forget = () => { for (const key of slots) if (this.detailCache.get(key) === entry) this.detailCache.delete(key); };
+    value.then(detailed => { if (detailed.audioPending) forget(); }, forget); cacheLimit(this.detailCache, 100);
     return value;
   }
   async rating(item: Item): Promise<string | null> { return item.ratings?.find(r => r.name === 'IMDb')?.value || null; }

@@ -4,6 +4,7 @@ import { InvalidCatalogue } from '../mirrors';
 import { fuegoContentURL, fuegoDirectVideo, fuegoMedia, fuegoOkruURL, fuegoUnlimplayURL, fuegoVoeURL, fuegoWrappedVideo, fuegocineBase } from './fuegocine-policy';
 import { normalizeText as text } from './paging';
 import { playerAgent } from './players';
+import { castellano } from '../audio';
 
 // The site is a Blogger blog, so its public JSON feed is the catalogue: every title and every episode is one post.
 interface Text { $t: string }
@@ -67,11 +68,13 @@ export function parseFuegoCard(entry: FeedEntry): Item | undefined {
   if (!kind || !page || !raw) return;
   const $ = load(stripComments(entry.content?.$t || '')), { name, year } = splitTitle(raw), rating = imdb($('[data-imdb]').first().attr('data-imdb'));
   if (!name) return;
-  // A movie post lists its servers, so its audio is known from the listing. A series post lists none (only its episodes do), so none is claimed for it.
-  const audio = kind === 'movie' ? fuegoAudio(parseFuegoLinks(entry.content?.$t || '')).map(t => t.id) : [];
+  // A movie post lists its servers, so its audio is known from the listing. But a post that links unlimplay may offer Castellano there
+  // without saying so, and a series post lists no servers at all (only its episodes do). Their audio stays unknown until that page is checked.
+  const links = kind === 'movie' ? parseFuegoLinks(entry.content?.$t || '') : [], listed = fuegoAudio(links).map(t => t.id);
+  const unknown = kind === 'series' || (!listed.includes(castellano) && !!fuegoUnlimplay(links));
   return {
     id: fuegoID(page), title: name, kind, year: year ?? (Number(labels.find(l => /^\d{4}$/.test(l))) || undefined), genre: '',
-    synopsis: text($('#tmdb-synopsis').text()), poster: imageURL($('[data-post-type] img').first().attr('src')), page, isSeries: kind === 'series', audio, ...(rating ? { rating } : {})
+    synopsis: text($('#tmdb-synopsis').text()), poster: imageURL($('[data-post-type] img').first().attr('src')), page, isSeries: kind === 'series', ...(unknown ? {} : { audio: listed }), ...(rating ? { rating } : {})
   };
 }
 export function parseFuegoDetails(entry: FeedEntry, base?: Item): Item {
@@ -111,14 +114,22 @@ export function fuegoAudio(links: FuegoLink[]): Translator[] {
     const language = languages[link.lang.toLowerCase()]; if (!language || !supported(link.url)) continue;
     let translator = result.find(t => t.id === language.id);
     if (!translator) { translator = { id: language.id, name: language.name, selected: result.length === 0, premium: false, sources: [] }; result.push(translator); }
-    if (!translator.sources!.some(s => s.url === link.url)) translator.sources!.push({ url: link.url, name: link.name.replace(/[^\p{L}\p{N}\s]/gu, '').trim() || 'Server' });
+    if (!translator.sources!.some(s => s.url === link.url)) translator.sources!.push(serverOf(link));
   }
   for (const translator of result) translator.sources!.sort((a, b) => rank(a.url) - rank(b.url));
   return result;
 }
+const serverOf = (link: FuegoLink) => ({ url: link.url, name: link.name.replace(/[^\p{L}\p{N}\s]/gu, '').trim() || 'Server' });
+// unlimplay lists the same video in several audios, and the posts only say which one they chose. The page itself may offer a Spanish one.
+export const fuegoUnlimplay = (links: FuegoLink[]) => links.find(l => fuegoUnlimplayURL(l.url));
+// Adds the Spanish option that unlimplay's page for this link offers, which the post does not list. Nothing changes if the post lists Castellano itself.
+export function fuegoSpanish(audio: Translator[], link: FuegoLink | undefined): Translator[] {
+  if (!link || audio.some(t => t.id === castellano)) return audio;
+  return [...audio, { id: castellano, name: 'Castellano', selected: audio.length === 0, premium: false, sources: [serverOf(link)] }];
+}
 
 // An episode post says which season and number it is in its title ("Name 1x3"), its header and a data attribute.
-export function parseFuegoEpisodes(entries: FeedEntry[]): { seasons: Season[]; audio: Translator[] } {
+export function parseFuegoEpisodes(entries: FeedEntry[]): { seasons: Season[]; audio: Translator[]; unlimplay?: FuegoLink } {
   const found: { season: number; number: number; page: string; image?: string; links: FuegoLink[] }[] = [];
   for (const entry of entries) {
     const page = entryPage(entry), content = entry.content?.$t || '', $ = load(stripComments(content)), fromTitle = (entry.title?.$t || '').match(/(\d+)x(\d+)\s*$/);
@@ -133,7 +144,7 @@ export function parseFuegoEpisodes(entries: FeedEntry[]): { seasons: Season[]; a
     if (!season) { season = { id: String(e.season), title: `Season ${e.season}`, episodes: [] }; seasons.push(season); }
     season.episodes.push({ id: String(e.number), season: season.id, title: `Episode ${e.number}`, page: e.page, image: e.image });
   }
-  return { seasons, audio: found.map(e => fuegoAudio(e.links)).find(a => a.length) || [] };
+  return { seasons, audio: found.map(e => fuegoAudio(e.links)).find(a => a.length) || [], unlimplay: found.map(e => fuegoUnlimplay(e.links)).find(Boolean) };
 }
 
 export function fuegoDirect(url: string): Source {
@@ -154,16 +165,29 @@ const audioKeys: Record<string, string[]> = { latino: ['latino'], castellano: ['
 // The page comes back in two versions. One keeps the server list in a variable. The other leaves that variable empty and
 // only gives the list to the call that finishes the player, at the end of the page. Both are plain JSON, which is only read.
 const serverLists = [/const\s+EMBEDS\s*=\s*(\{[^\n]*\})\s*;/, /finalizePlayer\(\s*(\{[^\n]*\})\s*\)\s*;?\s*\}/];
-export function parseUnlimplay(html: string, base: string, audio: string): string {
-  if (!fuegoUnlimplayURL(base)) throw new Error('This player is not supported.');
+function unlimplayLists(html: string) {
   const lists: Record<string, Record<string, unknown>>[] = [];
   for (const reader of serverLists) {
-    try { const list = JSON.parse(html.match(reader)?.[1] || ''); if (list && typeof list === 'object') lists.push(list); } catch { /* The other place may have it. */ }
+    try { const list = JSON.parse(html.match(reader)?.[1] || ''); if (list && typeof list === 'object' && Object.keys(list).length) lists.push(list); } catch { /* The other place may have it. */ }
   }
+  return lists;
+}
+// The buckets of the chosen audio in every list, and the first VOE address among them that the app can read.
+function unlimplayChoice(lists: Record<string, Record<string, unknown>>[], audio: string) {
+  const choices = lists.flatMap(list => (audioKeys[audio] || []).flatMap(key => list[key] && typeof list[key] === 'object' ? [list[key]] : []));
+  return { choices, voe: choices.map(choice => typeof choice.voe === 'string' ? fuegoVoeURL(choice.voe) : undefined).find(Boolean) };
+}
+export function parseUnlimplay(html: string, base: string, audio: string): string {
+  if (!fuegoUnlimplayURL(base)) throw new Error('This player is not supported.');
+  const lists = unlimplayLists(html);
   if (!lists.length) throw new Error('This server did not provide a playable video.');
-  const choices = lists.flatMap(list => { const key = (audioKeys[audio] || []).find(k => list[k] && typeof list[k] === 'object'); return key ? [list[key]] : []; });
+  const { choices, voe } = unlimplayChoice(lists, audio);
   if (!choices.length) throw new Error('This server does not have the selected audio.');
-  const voe = choices.map(choice => typeof choice.voe === 'string' ? fuegoVoeURL(choice.voe) : undefined).find(Boolean);
   if (!voe) throw new Error('This video server is not supported yet.');
   return voe;
+}
+// Whether the page offers an audio that can be played. Undefined when the page lists no servers, so it says nothing either way.
+export function unlimplayOffers(html: string, audio: string): boolean | undefined {
+  const lists = unlimplayLists(html);
+  return lists.length ? !!unlimplayChoice(lists, audio).voe : undefined;
 }

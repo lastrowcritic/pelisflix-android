@@ -38,9 +38,12 @@ describe('listings that name the audio', () => {
     expect(forteCardAudio('post-1 movies type-movies hentry category-accion')).toBeUndefined();
     expect(forteCardAudio('post-1 idiomas-subtituladas-p02 idiomas-castellano idiomas-castellano')).toEqual(['subtitulado', 'castellano']);
   });
-  it('reads the audio a Fuegocine movie lists and claims none for a series', () => {
-    expect(fuego('listing').map(c => c?.audio)).toEqual([['latino'], ['latino'], ['latino']]);
-    expect(fuego('listing-series').map(c => [c?.kind, c?.audio])).toEqual([['series', []], ['series', []], ['series', []]]);
+  it('leaves the audio of a Fuegocine title open when only its unlimplay page can say, and reads it when the post does', () => {
+    // These movies link unlimplay, which can offer Castellano without the post saying so. A series post lists no servers at all.
+    expect(fuego('listing').map(c => c?.audio)).toEqual([undefined, undefined, undefined]);
+    expect(fuego('listing-series').map(c => [c?.kind, c?.audio])).toEqual([['series', undefined], ['series', undefined], ['series', undefined]]);
+    // Without that link, the servers of the post say everything.
+    expect(fuego('listing', text => text.replaceAll('https://unlimplay.com/f/embed/movie/', 'https://voe.sx/e/a')).map(c => c?.audio)).toEqual([['latino'], ['latino'], ['latino']]);
   });
   it('recognises Castellano on a Fuegocine movie that lists it', () => {
     const spanish = fuego('listing', text => text.replaceAll('lang: \\"lat\\"', 'lang: \\"es\\"'));
@@ -67,6 +70,30 @@ describe('discovery filter', () => {
     expect(first.map(i => [i.id, i.audio])).toEqual([['es', ['castellano']]]);
     await discoverable(items, rules, details, known);
     expect(details).toHaveBeenCalledTimes(2);
+  });
+  it('keeps a title whose audio check could not finish, and asks again next time', async () => {
+    const known = new Map<string, Facts>(), details = vi.fn(async (item: Item) => ({ ...item, audioPending: true, translators: [{ id: 'latino', name: 'Latino', selected: true, premium: false }] }));
+    expect((await discoverable([title('x')], rules, details, known)).map(i => i.id)).toEqual(['x']);
+    await discoverable([title('x')], rules, details, known);
+    expect(details).toHaveBeenCalledTimes(2);
+  });
+  it('checks several titles at once up to the limit and keeps their order', async () => {
+    let active = 0, peak = 0;
+    const spanish = { id: 'castellano', name: 'Castellano', selected: true, premium: false }, other = { ...spanish, id: 'latino', name: 'Latino' };
+    const details = vi.fn(async (item: Item) => { active++; peak = Math.max(peak, active); await new Promise(resolve => setTimeout(resolve, 5)); active--; return { ...item, translators: [item.id.startsWith('es') ? spanish : other] }; });
+    const items = Array.from({ length: 10 }, (_, i) => title(`${i % 2 ? 'lat' : 'es'}${i}`));
+    expect((await discoverable(items, rules, details, new Map(), 3)).map(i => i.id)).toEqual(items.filter(i => i.id.startsWith('es')).map(i => i.id));
+    expect(peak).toBe(3);
+  });
+  it('does not hold the next titles back for a slow one', async () => {
+    const started: string[] = [];
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const details = vi.fn(async (item: Item) => { started.push(item.id); if (item.id === 'slow') await gate; return { ...item, translators: [{ id: 'castellano', name: 'Castellano', selected: true, premium: false }] }; });
+    const run = discoverable(['slow', 'a', 'b', 'c', 'd'].map(id => title(id)), rules, details, new Map(), 2);
+    await vi.waitFor(() => expect(started).toEqual(['slow', 'a', 'b', 'c', 'd']));
+    release();
+    expect((await run).map(i => i.id)).toEqual(['slow', 'a', 'b', 'c', 'd']);
   });
   it('keeps a title whose details cannot be read', async () => {
     const details = vi.fn(async () => { throw new Error('offline'); });
