@@ -1,7 +1,7 @@
 import type { Item, Selection, Settings, WatchRecord } from './types';
 export interface SavedState { settings: Settings; favorites: Item[]; history: WatchRecord[]; custom: Item[]; audioChoices: Record<string,string> }
 export const defaults: SavedState = {
-  settings: { mode: 'live', mirror: 'https://pelisflix1.dog/', quality: '1080p', autoplay: true, excludedCountries: [], reducedMotion: false },
+  settings: { mode: 'live', source: 'pelisflix', mirror: 'https://pelisflix1.dog/', quality: '1080p', autoplay: true, excludedCountries: [], castellanoOnly: false, reducedMotion: false },
   favorites: [], history: [], custom: [], audioChoices: {}
 };
 export const STORE_KEY = 'pelisflix.personal.v1';

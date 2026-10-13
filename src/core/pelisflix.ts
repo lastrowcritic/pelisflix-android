@@ -1,7 +1,8 @@
 import { load } from 'cheerio';
 import type { Catalogue, Collection, Item, Kind, Link, Season, Translator, Source } from './types';
 
-import {contentURL,trustedPlayerURL} from './pelisflix-policy';
+import {contentURL,playerURL,trustedPlayerURL} from './pelisflix-policy';
+import {parseVoe,playerAgent,voeRedirect} from './providers/players';
 export {contentURL,trustedPlayerURL,defaultMirror} from './pelisflix-policy';
 const studios = new Set(['netflix','amazon','disney','hulu','fox','hbo','the-cw','usa-network','dc','marvel']);
 const text = (value:string) => value.replace(/\s+/g,' ').trim();
@@ -40,7 +41,7 @@ export function parsePelisflixAudio(html:string,base:string):Translator[]{
   const $=load(html),result:Translator[]=[];
   $('.optns-bx .drpdn').each((_,group)=>{
     const sources:{url:string;name:string}[]=[];
-    $(group).find('[data-url]').each((_,e)=>{try{const url=trustedPlayerURL(atob($(e).attr('data-url')||''));if(url&&!sources.some(s=>s.url===url))sources.push({url,name:text($(e).find('span span').text())});}catch{/* Ignore malformed and advertising links. */}});
+    $(group).find('[data-url]').each((_,e)=>{try{const url=playerURL(atob($(e).attr('data-url')||''));if(url&&!sources.some(s=>s.url===url))sources.push({url,name:text($(e).find('span span').text())});}catch{/* Ignore malformed and advertising links. */}});
     if(!sources.length)return;
     const label=text($(group).find('.bstd > span').first().clone().children().remove().end().text());
     if(!label)return;const id=label.toLocaleLowerCase('es').replace(/\s+/g,'-');
@@ -85,5 +86,17 @@ export function parsePelisflixHost(html:string,base:string):Source {
   if(!media)throw new Error('This server did not provide a playable video.');
   const url=new URL(media,base);
   if(url.protocol!=='https:'||url.username||url.password||url.port||!url.hostname.includes('.')||!(/(^|\.)ibra\.lat$|(^|\.)nupload\.me$|(^|\.)voe\.sx$/.test(url.hostname)))throw new Error('This video server is not supported yet.');
-  return {streams:[{quality:'Auto',url:url.href,alternatives:[],mimeType:url.pathname.endsWith('.mp4')?'video/mp4':'application/x-mpegURL'}],subtitles:[],headers:{Referer:base,'User-Agent':'Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36'}};
+  return {streams:[{quality:'Auto',url:url.href,alternatives:[],mimeType:url.pathname.endsWith('.mp4')?'video/mp4':'application/x-mpegURL'}],subtitles:[],headers:{Referer:base,'User-Agent':playerAgent}};
 }
+// A player page can hand over to another one: nupload may only wrap a VOE iframe, and VOE redirects to an embed page on a changing domain.
+// Returns the next page to read, or nothing when this page holds the video itself.
+export function parsePelisflixEmbed(html:string,base:string):string|undefined {
+  let page:URL;try{page=new URL(base);}catch{return;}
+  if(/^nupload\.m[ey]$/.test(page.hostname)){
+    const $=load(html);
+    for(const frame of $('iframe[src]').toArray()){try{const url=new URL($(frame).attr('src')||'',base);if(url.hostname==='voe.sx'&&trustedPlayerURL(url.href))return url.href;}catch{/* Ignore malformed and advertising frames. */}}
+    return;
+  }
+  return voeRedirect(html,base);
+}
+export function parsePelisflixVoe(html:string,base:string):Source {return parseVoe(html,base);}

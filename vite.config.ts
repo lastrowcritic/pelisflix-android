@@ -4,19 +4,19 @@ import react from '@vitejs/plugin-react';
 import { isIP } from 'node:net';
 import { Readable } from 'node:stream';
 import {pipeline} from 'node:stream/promises';
-import {trustedPlayerURL,mediaURL} from './src/core/pelisflix-policy';
+import {mediaPolicy} from './src/core/providers/policy';
 const sessions = new Map<string,string>();
 function localContentProxy():Plugin {
   return {name:'rezka-preview-content',configureServer(server) {
     server.middlewares.use('/api/media',async(req,res)=>{
       try {
-        const params=new URL(req.url||'','http://localhost').searchParams,url=new URL(params.get('url')||''),referer=params.get('referer')||'';
-        if(req.method!=='GET'||url.protocol!=='https:'||url.username||url.password||url.port||!mediaURL(url.href)||!trustedPlayerURL(referer))throw new Error('Unsupported video address');
-        const response=await fetch(url,{signal:AbortSignal.timeout(25000),headers:{'User-Agent':'Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36',Referer:referer,...(req.headers.range?{Range:req.headers.range}:{})}});
-        if(!mediaURL(response.url))throw new Error('Unsupported video redirect');
+        const params=new URL(req.url||'','http://localhost').searchParams,url=new URL(params.get('url')||''),referer=params.get('referer')||'',provider=params.get('provider')||'',policy=mediaPolicy(provider);
+        if(req.method!=='GET'||url.protocol!=='https:'||url.username||url.password||url.port||!policy.media(url.href)||!policy.referer(referer))throw new Error('Unsupported video address');
+        const response=await fetch(url,{signal:AbortSignal.timeout(25000),headers:{'User-Agent':'Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36',...(referer?{Referer:referer}:{}),...(req.headers.range?{Range:req.headers.range}:{})}});
+        if(!policy.media(response.url))throw new Error('Unsupported video redirect');
         res.statusCode=response.status;
         const type=response.headers.get('content-type')||'application/octet-stream';res.setHeader('Content-Type',type);
-        const link=(raw:string)=>`/api/media?url=${encodeURIComponent(new URL(raw,response.url).href)}&referer=${encodeURIComponent(referer)}`;
+        const link=(raw:string)=>`/api/media?url=${encodeURIComponent(new URL(raw,response.url).href)}&referer=${encodeURIComponent(referer)}${provider?`&provider=${encodeURIComponent(provider)}`:''}`;
         if(/mpegurl/i.test(type)||!new URL(response.url).pathname.includes('.')&& !req.headers.range){const body=await response.text();if(body.trimStart().startsWith('#EXTM3U')){res.setHeader('Content-Type','application/vnd.apple.mpegurl');res.end(body.split('\n').map(line=>line.startsWith('#')?line.replace(/URI="([^"]+)"/g,(_,url)=>`URI="${link(url)}"`):line.trim()?link(line.trim()):line).join('\n'));}else res.end(body);}
         else if(response.body)await pipeline(Readable.fromWeb(response.body as any),res);else res.end();
       }catch(error){if(res.headersSent)res.destroy();else{res.statusCode=502;res.end(error instanceof Error?error.message:'Video request failed');}}

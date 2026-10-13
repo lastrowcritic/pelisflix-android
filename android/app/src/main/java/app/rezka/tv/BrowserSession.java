@@ -71,7 +71,7 @@ final class BrowserSession {
             if(current==null)return;
             try{
                 JSONObject result=new JSONObject(new org.json.JSONTokener(value).nextValue().toString());String text=result.optString("text"),url=result.optString("url");
-                boolean challenge=text.matches("(?is).*(anubis_challenge|\\.within\\.website|challenge-platform|cf-turnstile).*" );
+                boolean challenge=text.matches("(?is).*(anubis_challenge|\\.within\\.website|challenge-platform/h/|cf-turnstile).*" );
                 if(result.optBoolean("loaded")&&url.startsWith(origin+"/")&&text.length()>100&&!challenge){ready=true;fetch();return;}
                 if(challenge&&System.currentTimeMillis()>deadline-10000){JSObject response=new JSObject();response.put("status",403);response.put("url",url);response.put("text",text);complete(response);return;}
             }catch(Exception ignored){}

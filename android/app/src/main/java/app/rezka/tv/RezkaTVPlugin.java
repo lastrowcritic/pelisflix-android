@@ -43,7 +43,7 @@ public class RezkaTVPlugin extends Plugin {
         if(requestCode==6101)playResult(call,result);else if(requestCode==6102)verificationResult(call,result);else if(requestCode==6103)fileResult(call,result);
     }
     private static String requestKey(String url,String method,String body){return method+":"+url.replaceAll("([?&])t=\\d+(&|$)","$1").replaceAll("[?&]$","")+":"+(body==null?"":body);}
-    private static boolean challenge(String text){return java.util.regex.Pattern.compile("just a moment|attention required|cf-browser-verification|cf-turnstile|challenge-platform|anubis_challenge|anubis|within\\.website",java.util.regex.Pattern.CASE_INSENSITIVE).matcher(text).find();}
+    private static boolean challenge(String text){return java.util.regex.Pattern.compile("just a moment|attention required|cf-browser-verification|cf-turnstile|challenge-platform/h/|anubis_challenge|anubis|within\\.website",java.util.regex.Pattern.CASE_INSENSITIVE).matcher(text).find();}
     private static String decode(byte[] bytes){try{return StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString();}catch(Exception e){return new String(bytes,Charset.forName("windows-1251"));}}
     private static byte[] readProbe(InputStream input)throws java.io.IOException {
         java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream();byte[] bytes=new byte[1024];

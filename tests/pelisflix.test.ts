@@ -2,9 +2,9 @@ import {describe,it,expect,vi,afterEach} from 'vitest';
 import {genreArtwork} from '../src/core/categories';
 import {existsSync,readFileSync} from 'node:fs';
 import {ContentSource,catalogueURL} from '../src/core/source';
-import {sourceURL} from '../src/core/pelisflix-policy';
+import {mediaURL,sourceURL} from '../src/core/pelisflix-policy';
 import {defaults} from '../src/core/store';
-import {contentURL,defaultMirror,parsePelisflixAudio,parsePelisflixCatalogue,parsePelisflixDetails,parsePelisflixEpisodes,parsePelisflixCollections,parsePelisflixHost,titleID,trustedPlayerURL} from '../src/core/pelisflix';
+import {contentURL,defaultMirror,parsePelisflixAudio,parsePelisflixCatalogue,parsePelisflixDetails,parsePelisflixEmbed,parsePelisflixEpisodes,parsePelisflixCollections,parsePelisflixHost,parsePelisflixVoe,titleID,trustedPlayerURL} from '../src/core/pelisflix';
 const fixture=(name:string)=>readFileSync(`tests/fixtures/pelisflix/${name}.html`,'utf8');
 const film={id:titleID(defaultMirror+'pelicula/primitive-war/'),title:'Primitive War',kind:'movie' as const,page:defaultMirror+'pelicula/primitive-war/',genre:'Action',synopsis:'A real synopsis'};
 afterEach(()=>{vi.useRealTimers();localStorage.clear();vi.unstubAllGlobals();});
@@ -75,5 +75,98 @@ describe('Pelisflix details after changing mirrors',()=>{
   const base='https://pelisflix200.dog/pelicula/primitive-war/';
   const detail=parsePelisflixDetails(fixture('movie').replaceAll('pelisflix1.dog','pelisflix200.dog'),base,item);
   expect(detail.page).toBe(base);expect(detail.id).toBe(item.id);expect(detail.translators?.[0].id).toBe('latino');
+ });
+});
+
+// VOE embeds hide their stream data in a JSON script. This is the inverse of the app's decoder, so the tests never need a live token.
+const rot13=(text:string)=>text.replace(/[a-z]/gi,c=>{const base=c<='Z'?65:97;return String.fromCharCode((c.charCodeAt(0)-base+13)%26+base);});
+function voePayload(data:object){
+ const reversed=[...Buffer.from(JSON.stringify(data)).toString('base64')].reverse().join('');
+ const shifted=[...reversed].map(c=>String.fromCharCode(c.charCodeAt(0)+3)).join('');
+ const junk=['@$','^^','~@','%?','*~','!!','#&'],encoded=Buffer.from(shifted,'latin1').toString('base64');
+ return rot13(encoded.match(/.{1,9}/g)!.map((part,index)=>part+junk[index%junk.length]).join(''));
+}
+const voeId='abc123def456',cdn=`https://ugc-cdn-caching-test.cloudwindow-route.com/engine/hls2-c/01/1/${voeId}`;
+const voeStreams={source:`${cdn}/master.m3u8?t=TestToken`,direct_access_url:'https://ugc-cdn-caching-test.cloudwindow-route.com/engine/download/01/1/video.mp4?t=TestToken',title:'Example'};
+const voeEmbed=(data:object=voeStreams)=>`<html><body><script>globalThis.pelisflixUnsafe=true</script><script type="application/json">${JSON.stringify([voePayload(data)])}</script></body></html>`;
+describe('Pelisflix VOE players',()=>{
+ it('unwraps the nupload iframe link to the VOE player and still rejects wrapped advertising links',()=>{
+  const wrap=(inner:string)=>`<div class="optns-bx"><div class="drpdn"><button class="bstd"><span>LATINO</span></button><div data-url="${btoa('https://nupload.my/iframe/?url='+encodeURIComponent(inner))}"></div></div></div>`;
+  expect(parsePelisflixAudio(wrap('https://voe.sx/e/'+voeId),defaultMirror)[0].sources).toEqual([{url:'https://voe.sx/e/'+voeId,name:''}]);
+  expect(parsePelisflixAudio(wrap('https://ads.example/e/'+voeId),defaultMirror)).toEqual([]);
+ });
+ it('finds the VOE player inside a nupload wrapper without trusting other iframes',()=>{
+  expect(parsePelisflixEmbed(fixture('nupload-wrapper'),'https://nupload.my/watch/example')).toBe('https://voe.sx/e/'+voeId);
+  expect(parsePelisflixEmbed(fixture('nupload-wrapper').replace('https://voe.sx/e/'+voeId,'https://ads.example/e/'+voeId),'https://nupload.my/watch/example')).toBeUndefined();
+  expect(parsePelisflixEmbed(fixture('provider'),'https://nupload.my/watch/example')).toBeUndefined();
+ });
+ it('follows the VOE redirect only to the same file on a secure public address',()=>{
+  const redirect=fixture('voe-redirect'),base='https://voe.sx/e/'+voeId;
+  expect(parsePelisflixEmbed(redirect,base)).toBe('https://megankiddifference.com/e/'+voeId);
+  expect(parsePelisflixEmbed(redirect.replaceAll('megankiddifference.com','rotated-domain.example'),base)).toBe('https://rotated-domain.example/e/'+voeId);
+  for(const target of ['https://evil.example/e/otherfile','http://evil.example/e/'+voeId,'https://user:pass@evil.example/e/'+voeId,'https://evil.example:8443/e/'+voeId,'https://evil.example/watch/'+voeId,'https://127.0.0.1/e/'+voeId,'https://localhost/e/'+voeId])
+   expect(parsePelisflixEmbed(redirect.replaceAll('https://megankiddifference.com/e/'+voeId,target),base),target).toBeUndefined();
+  expect(parsePelisflixEmbed(voeEmbed(),'https://megankiddifference.com/e/'+voeId)).toBeUndefined();
+ });
+ it('decodes the VOE stream data without executing the page',()=>{
+  (globalThis as any).pelisflixUnsafe=false;
+  const data=parsePelisflixVoe(voeEmbed(),'https://megankiddifference.com/e/'+voeId);
+  expect(data.streams).toEqual([{quality:'Auto',url:voeStreams.source,alternatives:[],mimeType:'application/x-mpegURL'}]);
+  expect(data.headers.Referer).toBe('https://voe.sx/e/'+voeId);expect((globalThis as any).pelisflixUnsafe).toBe(false);
+ });
+ it('uses the direct video file when VOE gives no playlist and rejects unknown video hosts',()=>{
+  const direct=parsePelisflixVoe(voeEmbed({direct_access_url:voeStreams.direct_access_url}),'https://megankiddifference.com/e/'+voeId);
+  expect(direct.streams[0]).toMatchObject({url:voeStreams.direct_access_url,mimeType:'video/mp4',alternatives:[]});
+  expect(()=>parsePelisflixVoe(voeEmbed({source:'https://ads.example/master.m3u8'}),'https://megankiddifference.com/e/'+voeId)).toThrow('not supported');
+  expect(()=>parsePelisflixVoe('<html>nothing here</html>','https://megankiddifference.com/e/'+voeId)).toThrow('playable video');
+  expect(()=>parsePelisflixVoe('<script type="application/json">["not a payload"]</script>','https://megankiddifference.com/e/'+voeId)).toThrow('playable video');
+ });
+ it('accepts the VOE video network without accepting lookalike hosts',()=>{
+  expect(mediaURL(voeStreams.source)).toBe(voeStreams.source);
+  expect(mediaURL('https://cloudwindow-route.com.evil.example/master.m3u8')).toBeUndefined();
+  expect(mediaURL('http://ugc-cdn-caching-test.cloudwindow-route.com/master.m3u8')).toBeUndefined();
+ });
+});
+
+describe('Pelisflix playback through nupload and VOE',()=>{
+ // Serves every network call a real playback makes, so the true request() safety checks run.
+ function network(redirect=fixture('voe-redirect'),embedHost='megankiddifference.com'){
+  const seen:string[]=[];
+  vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL)=>{
+   const outer=new URL(String(input),'http://localhost'),url=outer.searchParams.get('url')!;seen.push(url);
+   const page=(text:string,status=200)=>new Response(text,{status,headers:{'X-Rezka-URL':url}});
+   if(outer.pathname==='/api/content'){
+    if(url.includes('/pelicula/'))return page(fixture('movie'));
+    if(url.startsWith('https://nupload.my/watch/'))return page(fixture('nupload-wrapper'));
+    if(url==='https://voe.sx/e/'+voeId)return page(redirect);
+    if(url===`https://${embedHost}/e/${voeId}`)return page(voeEmbed());
+    return page('Not found',404);
+   }
+   if(url.endsWith('master.m3u8?t=TestToken'))return new Response('#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\nindex.m3u8?t=TestToken');
+   if(url.endsWith('index.m3u8?t=TestToken'))return new Response('#EXTM3U\n#EXTINF:4,\nsegment0.ts?t=TestToken\n#EXT-X-ENDLIST');
+   if(url.includes('segment0.ts'))return new Response(new Uint8Array([0x47,0x40,0,0x10]));
+   return new Response('Not found',{status:404});
+  }));
+  return seen;
+ }
+ const film={id:titleID(defaultMirror+'pelicula/example/'),title:'Example',kind:'movie' as const,page:defaultMirror+'pelicula/example/',genre:'',synopsis:''};
+ it('plays a title whose nupload link only wraps a VOE player on a rotating domain',async()=>{
+  const seen=network(),source=new ContentSource({...structuredClone(defaults.settings),mirror:defaultMirror});
+  await expect(source.request(`https://megankiddifference.com/e/${voeId}`)).rejects.toThrow('outside');
+  const result=await source.playback(await source.details(film),{translator:'latino'});
+  expect(result.streams[0].mimeType).toBe('application/x-mpegURL');
+  expect(result.headers.Referer).toBe('https://voe.sx/e/'+voeId);
+  expect(result.streams[0].url).toBe(`/api/media?url=${encodeURIComponent(voeStreams.source)}&referer=${encodeURIComponent('https://voe.sx/e/'+voeId)}`);
+  expect(seen.filter(url=>url.includes('/e/')&&!url.includes('mq5u01'))).toEqual(['https://voe.sx/e/'+voeId,`https://megankiddifference.com/e/${voeId}`]);
+ });
+ it('follows whichever domain VOE currently redirects to',async()=>{
+  const seen=network(fixture('voe-redirect').replaceAll('megankiddifference.com','rotated-domain.example'),'rotated-domain.example'),source=new ContentSource({...structuredClone(defaults.settings),mirror:defaultMirror});
+  const result=await source.playback(await source.details(film),{translator:'latino'});
+  expect(result.streams[0].url).toContain(encodeURIComponent(voeStreams.source));expect(seen).toContain(`https://rotated-domain.example/e/${voeId}`);
+ });
+ it('never requests a redirect to a different file or website',async()=>{
+  const seen=network(fixture('voe-redirect').replaceAll('https://megankiddifference.com/e/'+voeId,'https://evil.example/e/otherfile')),source=new ContentSource({...structuredClone(defaults.settings),mirror:defaultMirror});
+  await expect(source.playback(await source.details(film),{translator:'latino'})).rejects.toThrow('could not be opened');
+  expect(seen.some(url=>url.includes('evil.example'))).toBe(false);
  });
 });

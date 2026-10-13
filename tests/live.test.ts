@@ -2,6 +2,7 @@ import {describe,it,expect,vi} from 'vitest';
 import {ContentSource} from '../src/core/source';
 import {defaults} from '../src/core/store';
 import {sourceURL,defaultMirror,trustedPlayerURL} from '../src/core/pelisflix-policy';
+import {titleID} from '../src/core/pelisflix';
 import {genreArtwork} from '../src/core/categories';
 import {existsSync} from 'node:fs';
 
@@ -17,6 +18,12 @@ function source(mirror=defaultMirror){
   if(!response.ok)throw new Error(`Source returned ${response.status}`);
   return {url:response.url,status:response.status,text:await response.text()};
  });return {source,request};
+}
+// Unlike source(), this keeps the real request() so the address checks run exactly as in the app.
+function webSource(mirror:string){
+ vi.unstubAllGlobals();const nativeFetch=globalThis.fetch;
+ vi.stubGlobal('fetch',((input:RequestInfo|URL,init?:RequestInit)=>nativeFetch(typeof input==='string'&&input.startsWith('/api/')?(process.env.PELISFLIX_PROXY||'http://127.0.0.1:5181')+input:input,init)) as typeof fetch);
+ return new ContentSource({...defaults.settings,mirror});
 }
 describe.skipIf(!live)('Live Pelisflix source',()=>{
  it('loads real catalog, search, pagination and details and reuses cached reads',async()=>{
@@ -40,5 +47,13 @@ describe.skipIf(!live)('Live Pelisflix source',()=>{
   const {source:original}=source();const result=await original.search('spider-man');const item=result.items.find(i=>i.page?.includes('spider-man-un-nuevo-dia'))!;
   const {source:switched}=source('https://pelisflix200.dog/');const detail=await switched.details(item);expect(detail.id).toBe(item.id);expect(new URL(detail.page!).hostname).toBe('pelisflix200.dog');
   const playback=await switched.playback(detail,{translator:'latino'});expect(playback.streams[0].mimeType).toBe('application/x-mpegURL');
+ },90000);
+ it('plays a title whose nupload link only wraps a VOE player on a changing embed domain',async()=>{
+  const page='https://pelisflix200.dog/pelicula/apuntes-para-una-ficcion-consentida/',api=webSource('https://pelisflix200.dog/');
+  const detail=await api.details({id:titleID(page),title:'Apuntes para una ficción consentida',kind:'movie',page,genre:'',synopsis:''});
+  const result=await api.playback(detail,{}),stream=result.streams[0];
+  expect(stream.mimeType).toBe('application/x-mpegURL');expect(trustedPlayerURL(result.headers.Referer)).toBeTruthy();
+  const address=new URL(stream.url,'http://localhost').searchParams.get('url')!;expect(new URL(address).hostname).toMatch(/cloudwindow-route\.com$/);
+  const manifest=await fetch(address,{headers:result.headers,signal:AbortSignal.timeout(18000)});expect(manifest.status).toBe(200);expect((await manifest.text()).startsWith('#EXTM3U')).toBe(true);
  },90000);
 });

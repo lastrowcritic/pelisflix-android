@@ -1,3 +1,4 @@
+export type ProviderId = 'pelisflix' | 'pelisforte' | 'fuegocine';
 export type Kind = 'movie' | 'series' | 'animation' | 'anime';
 export interface Link { name: string; url: string; image?: string; year?:string; rating?:string }
 export interface Collection extends Link { count:string }
@@ -9,6 +10,8 @@ export interface Item {
   genre: string; synopsis: string; poster?: string; backdrop?: string; page?: string;
   stream?: string; duration?: number; countries?: string[]; rating?: string;
   translators?: Translator[]; seasons?: Season[]; isSeries?: boolean;
+  // Audio ids (latino, castellano, subtitulado) read from a listing or a details page. Absent when not known yet.
+  audio?: string[];
   actors?: Link[]; directors?: Link[]; collections?: Link[]; rankings?: Link[];
   information?: Record<string, string>; franchise?: Link[]; franchiseTitle?:string;
   rezkaID?:string; ratings?:{name:string;value:string;url?:string}[];
@@ -17,14 +20,14 @@ export interface Item {
 export interface Catalogue { items: Item[]; hasNext: boolean; categories: (Link & { kind: Kind })[] }
 export interface Stream { quality: string; url: string; alternatives: string[]; mimeType?: string }
 export interface Subtitle { label: string; language: string; url: string }
-export interface Source { streams: Stream[]; subtitles: Subtitle[]; headers: Record<string,string>; defaultSubtitle?: string }
+export interface Source { streams: Stream[]; subtitles: Subtitle[]; headers: Record<string,string>; defaultSubtitle?: string; provider?: ProviderId }
 export interface Selection { translator?: string; season?: string; episode?: string }
 export interface WatchRecord extends Selection {
   item: Item; position: number; duration: number; updatedAt: number; completed: boolean;
 }
 export interface Settings {
-  mode: 'live' | 'demo'; mirror: string; quality: string; autoplay: boolean;
-  excludedCountries: string[]; reducedMotion: boolean;
+  mode: 'live' | 'demo'; source: ProviderId; mirror: string; quality: string; autoplay: boolean;
+  excludedCountries: string[]; castellanoOnly: boolean; reducedMotion: boolean;
 }
 export interface Comment { id: string; author: string; date: string; text: string; likes: string; indent: number; parentID?:string; avatar?:string }
 export interface Person { name: string; originalName: string; image?: string; birthDate: string; jobs: string[]; filmography: Item[]; careers:Link[] }
