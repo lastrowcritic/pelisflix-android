@@ -24,7 +24,7 @@ Pelisflix is a client for browsing and watching titles from Pelisflix, Pelisfort
 
 ## Install
 
-Download the APK from Releases and open it on your Android device. On a TV, transfer the APK to a file manager or install it from a computer with `adb install Pelisflix-0.1.1.apk`.
+Download the APK from Releases and open it on your Android device. On a TV, transfer the APK to a file manager or install it from a computer with `adb install Pelisflix-0.1.2.apk`.
 
 The app requires Android 7.0 or newer.
 
