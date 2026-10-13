@@ -1,13 +1,15 @@
 import type { Item, Selection, Settings, WatchRecord } from './types';
 export interface SavedState { settings: Settings; favorites: Item[]; history: WatchRecord[]; custom: Item[]; audioChoices: Record<string,string> }
 export const defaults: SavedState = {
-  settings: { mode: 'live', source: 'pelisflix', mirror: 'https://pelisflix1.dog/', quality: '1080p', autoplay: true, excludedCountries: [], castellanoOnly: false, reducedMotion: false },
+  settings: { mode: 'live', source: 'pelisflix', mirror: 'https://pelisflix1.dog/', quality: '1080p', autoplay: true, excludedCountries: [], castellanoOnly: false, reducedMotion: false, syncServer: '' },
   favorites: [], history: [], custom: [], audioChoices: {}
 };
-export const STORE_KEY = 'pelisflix.personal.v1';
+export const STORE_KEY = 'pelisflix.v1';
+// Earlier builds saved under this name. It is read once so nothing saved in a browser is lost.
+const LEGACY_STORE_KEY = 'pelisflix.personal.v1';
 export function loadState(storage: Pick<Storage,'getItem'> = localStorage): SavedState {
   try {
-    const saved = JSON.parse(storage.getItem(STORE_KEY) || 'null');
+    const saved = JSON.parse(storage.getItem(STORE_KEY) || storage.getItem(LEGACY_STORE_KEY) || 'null');
     if (!saved) return structuredClone(defaults);
     const audioChoices = saved.audioChoices && typeof saved.audioChoices === 'object' && !Array.isArray(saved.audioChoices)
       ? Object.fromEntries(Object.entries(saved.audioChoices).filter((entry): entry is [string,string] => typeof entry[1] === 'string' && entry[1].length > 0))

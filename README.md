@@ -1,6 +1,6 @@
 # Pelisflix for Android and Google TV
 
-Pelisflix is a client for browsing and watching titles from the Pelisflix website. It works on Android phones, tablets, Android TV and Google TV, with touch controls on handheld devices and remote navigation on television.
+Pelisflix is a client for browsing and watching titles from Pelisflix, Pelisforte and Fuegocine. It works on Android phones, tablets, Android TV and Google TV, with touch controls on handheld devices and remote navigation on television.
 
 [Download the latest APK](https://github.com/lastrowcritic/pelisflix-android/releases/latest)
 
@@ -9,12 +9,15 @@ Pelisflix is a client for browsing and watching titles from the Pelisflix websit
 ## Features
 
 - Browse films, series, genres and collections.
+- Switch between Pelisflix, Pelisforte and Fuegocine in Settings. Saved titles and Continue watching open with the source they came from.
+- Hide titles that cannot be played in Castellano.
 - Search with a TV keyboard or your phone keyboard.
 - Choose audio, seasons and episodes.
 - Resume at the saved episode and minute, with a separate position for each episode.
 - Remember each title's audio choice.
 - Use native playback with ten-second seeking, quality controls and subtitles when available.
 - Save a watchlist and viewing history on the device.
+- Optionally sync your viewing history between devices with a server you host yourself.
 - Reuse cached catalog pages, title details and artwork.
 - Choose a mirror and keep the same viewing history when the domain changes.
 - Check GitHub for future app updates from Settings.
@@ -71,4 +74,10 @@ npm run test:live
 
 The initial release was tested with actual Spider-Man media in the Mac preview and Android TV emulator. Tests cover catalog parsing, mirror changes, episode identity, audio selection, media validation, caching and remote navigation. Viewing progress is saved during playback and on exit.
 
-All viewing history and preferences stay on the device in this public edition.
+## Sync across devices (optional)
+
+Everything stays on the device until you set up sync. There is no public sync server: you host your own, then enter its address in **Settings → Sync across devices** and sign in with an email and password. Use the same account on each device to continue a title from the same second.
+
+The server is [rezka-sync-server](https://github.com/lastrowcritic/rezka-sync-server), a few PHP files and a MySQL database that run on ordinary shared hosting. Its README explains how to set it up. Only watch history is synced: the watchlist and settings stay on each device, and the app refuses to sync over plain HTTP. Clearing the history in the Library clears it on the server too.
+
+The same server also works with the Rezka apps. This app only syncs and shows titles from its own sources and leaves the rest of the account alone. If you would rather keep the apps apart, create a separate account for each.

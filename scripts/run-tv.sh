@@ -34,7 +34,7 @@ done
 if [[ "$ready" != true ]]; then echo 'The TV emulator did not finish starting. Check its window and try again.'; exit 1; fi
 npm run android:build
 "$ANDROID_HOME/platform-tools/adb" -s "$device" install -r android/app/build/outputs/apk/debug/app-debug.apk
-"$ANDROID_HOME/platform-tools/adb" -s "$device" shell am start -n app.pelisflix.personal/app.rezka.tv.MainActivity --ez tvLayout true
+"$ANDROID_HOME/platform-tools/adb" -s "$device" shell am start -n app.pelisflix.tv/app.rezka.tv.MainActivity --ez tvLayout true
 
 # Keep an emulator launched by this command attached to the terminal session.
 if [[ -n "${emulator_pid:-}" ]]; then wait "$emulator_pid"; fi

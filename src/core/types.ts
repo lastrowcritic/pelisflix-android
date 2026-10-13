@@ -28,6 +28,8 @@ export interface WatchRecord extends Selection {
 export interface Settings {
   mode: 'live' | 'demo'; source: ProviderId; mirror: string; quality: string; autoplay: boolean;
   excludedCountries: string[]; castellanoOnly: boolean; reducedMotion: boolean;
+  /** Address of the user's own sync server. Empty keeps the viewing history on this device. */
+  syncServer: string;
 }
 export interface Comment { id: string; author: string; date: string; text: string; likes: string; indent: number; parentID?:string; avatar?:string }
 export interface Person { name: string; originalName: string; image?: string; birthDate: string; jobs: string[]; filmography: Item[]; careers:Link[] }

@@ -1,0 +1,280 @@
+{
+    "sent": [
+        {
+            "item": {
+                "id": "pelisflix:apuntes-para-una-ficcion-consentida",
+                "title": "Apuntes para una ficción consentida",
+                "kind": "movie",
+                "year": 2025,
+                "genre": "Drama",
+                "synopsis": "Una historia.",
+                "poster": "https://pelisflix1.dog/wp-content/uploads/apuntes.jpg",
+                "page": "https://pelisflix1.dog/pelicula/apuntes-para-una-ficcion-consentida/",
+                "isSeries": false,
+                "audio": [
+                    "castellano"
+                ],
+                "translators": [
+                    {
+                        "id": "castellano",
+                        "name": "Castellano",
+                        "selected": true,
+                        "premium": false,
+                        "sources": [
+                            {
+                                "url": "https://nupload.my/watch/abc",
+                                "name": "Nupload"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "translator": "castellano",
+            "position": 1260,
+            "duration": 6000,
+            "updatedAt": 9000,
+            "completed": false
+        },
+        {
+            "item": {
+                "id": "pelisforte:/serie/el-juego-del-calamar-2021",
+                "title": "El juego del calamar",
+                "kind": "series",
+                "genre": "",
+                "synopsis": "",
+                "poster": "https://www2.pelisforte.se/wp-content/uploads/calamar-300x450.webp",
+                "page": "https://www2.pelisforte.se/serie/el-juego-del-calamar-2021",
+                "isSeries": true,
+                "audio": [
+                    "latino",
+                    "castellano"
+                ],
+                "seasons": [
+                    {
+                        "id": "3",
+                        "title": "Temporada 3",
+                        "page": "https://www2.pelisforte.se/serie/el-juego-del-calamar-2021/temporada-3",
+                        "episodes": [
+                            {
+                                "id": "1",
+                                "title": "Episodio 1",
+                                "season": "3",
+                                "page": "https://www2.pelisforte.se/episodio/el-juego-del-calamar-3x1"
+                            },
+                            {
+                                "id": "2",
+                                "title": "Episodio 2",
+                                "season": "3",
+                                "page": "https://www2.pelisforte.se/episodio/el-juego-del-calamar-3x2"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "translator": "castellano",
+            "season": "3",
+            "episode": "1",
+            "position": 600,
+            "duration": 3000,
+            "updatedAt": 10000,
+            "completed": false
+        },
+        {
+            "item": {
+                "id": "fuegocine:/2026/05/hoppers-operacion-castor-2026.html",
+                "title": "Hoppers: Operación castor",
+                "kind": "movie",
+                "year": 2026,
+                "genre": "",
+                "synopsis": "",
+                "page": "https://www.fuegocine.com/2026/05/hoppers-operacion-castor-2026.html",
+                "isSeries": false,
+                "translators": [
+                    {
+                        "id": "latino",
+                        "name": "Latino",
+                        "selected": true,
+                        "premium": false,
+                        "sources": [
+                            {
+                                "url": "https://voe.sx/e/abc123",
+                                "name": "VOE"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "translator": "latino",
+            "position": 300,
+            "duration": 5400,
+            "updatedAt": 8000,
+            "completed": false
+        }
+    ],
+    "stored": [
+        {
+            "item": {
+                "id": "pelisflix:apuntes-para-una-ficcion-consentida",
+                "title": "Apuntes para una ficción consentida",
+                "year": 2025,
+                "genre": "Drama",
+                "synopsis": "Una historia.",
+                "poster": "https://pelisflix1.dog/wp-content/uploads/apuntes.jpg",
+                "page": "https://pelisflix1.dog/pelicula/apuntes-para-una-ficcion-consentida/",
+                "isSeries": false,
+                "kind": "movie",
+                "symbol": "A",
+                "paletteIndex": 0,
+                "posterURL": "https://pelisflix1.dog/wp-content/uploads/apuntes.jpg",
+                "rezka": {
+                    "movieID": "pelisflix:apuntes-para-una-ficcion-consentida",
+                    "pageURL": "https://pelisflix1.dog/pelicula/apuntes-para-una-ficcion-consentida/",
+                    "isSeries": false,
+                    "translators": [
+                        {
+                            "id": "castellano",
+                            "name": "Castellano",
+                            "isPremium": false,
+                            "isSelected": true,
+                            "flags": {}
+                        }
+                    ],
+                    "seasons": [],
+                    "playerFlags": {}
+                },
+                "rezkaID": "pelisflix:apuntes-para-una-ficcion-consentida",
+                "translators": [
+                    {
+                        "id": "castellano",
+                        "name": "Castellano",
+                        "selected": true,
+                        "premium": false
+                    }
+                ],
+                "seasons": []
+            },
+            "position": 1260,
+            "duration": 6000,
+            "updatedAt": 9000,
+            "completed": false,
+            "translator": "castellano",
+            "translatorID": "castellano"
+        },
+        {
+            "item": {
+                "id": "pelisforte:/serie/el-juego-del-calamar-2021",
+                "title": "El juego del calamar",
+                "genre": "",
+                "synopsis": "",
+                "poster": "https://www2.pelisforte.se/wp-content/uploads/calamar-300x450.webp",
+                "page": "https://www2.pelisforte.se/serie/el-juego-del-calamar-2021",
+                "isSeries": true,
+                "kind": "series",
+                "symbol": "E",
+                "paletteIndex": 0,
+                "posterURL": "https://www2.pelisforte.se/wp-content/uploads/calamar-300x450.webp",
+                "rezka": {
+                    "movieID": "pelisforte:/serie/el-juego-del-calamar-2021",
+                    "pageURL": "https://www2.pelisforte.se/serie/el-juego-del-calamar-2021",
+                    "isSeries": true,
+                    "translators": [],
+                    "seasons": [
+                        {
+                            "id": "3",
+                            "title": "Temporada 3",
+                            "episodes": [
+                                {
+                                    "id": "1",
+                                    "title": "Episodio 1",
+                                    "seasonID": "3"
+                                },
+                                {
+                                    "id": "2",
+                                    "title": "Episodio 2",
+                                    "seasonID": "3"
+                                }
+                            ]
+                        }
+                    ],
+                    "playerFlags": {}
+                },
+                "rezkaID": "pelisforte:/serie/el-juego-del-calamar-2021",
+                "translators": [],
+                "seasons": [
+                    {
+                        "id": "3",
+                        "title": "Temporada 3",
+                        "episodes": [
+                            {
+                                "id": "1",
+                                "title": "Episodio 1",
+                                "season": "3"
+                            },
+                            {
+                                "id": "2",
+                                "title": "Episodio 2",
+                                "season": "3"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "position": 600,
+            "duration": 3000,
+            "updatedAt": 10000,
+            "completed": false,
+            "season": "3",
+            "seasonID": "3",
+            "episode": "1",
+            "episodeID": "1",
+            "translator": "castellano",
+            "translatorID": "castellano"
+        },
+        {
+            "item": {
+                "id": "fuegocine:/2026/05/hoppers-operacion-castor-2026.html",
+                "title": "Hoppers: Operación castor",
+                "year": 2026,
+                "genre": "",
+                "synopsis": "",
+                "page": "https://www.fuegocine.com/2026/05/hoppers-operacion-castor-2026.html",
+                "isSeries": false,
+                "kind": "movie",
+                "symbol": "H",
+                "paletteIndex": 0,
+                "rezka": {
+                    "movieID": "fuegocine:/2026/05/hoppers-operacion-castor-2026.html",
+                    "pageURL": "https://www.fuegocine.com/2026/05/hoppers-operacion-castor-2026.html",
+                    "isSeries": false,
+                    "translators": [
+                        {
+                            "id": "latino",
+                            "name": "Latino",
+                            "isPremium": false,
+                            "isSelected": true,
+                            "flags": {}
+                        }
+                    ],
+                    "seasons": [],
+                    "playerFlags": {}
+                },
+                "rezkaID": "fuegocine:/2026/05/hoppers-operacion-castor-2026.html",
+                "translators": [
+                    {
+                        "id": "latino",
+                        "name": "Latino",
+                        "selected": true,
+                        "premium": false
+                    }
+                ],
+                "seasons": []
+            },
+            "position": 300,
+            "duration": 5400,
+            "updatedAt": 8000,
+            "completed": false,
+            "translator": "latino",
+            "translatorID": "latino"
+        }
+    ]
+}

@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Pelisflix</string>
     <string name="title_activity_main">Pelisflix</string>
-    <string name="package_name">app.pelisflix.personal</string>
-    <string name="custom_url_scheme">app.pelisflix.personal</string>
+    <string name="package_name">app.pelisflix.tv</string>
+    <string name="custom_url_scheme">app.pelisflix.tv</string>
     <string name="download_channel">Video downloads</string>
 </resources>

@@ -13,7 +13,7 @@ export const providerIds = Object.keys(policies) as ProviderId[];
 export const providerLabels: Record<ProviderId, string> = { pelisflix: 'Pelisflix', pelisforte: 'Pelisforte', fuegocine: 'Fuegocine' };
 // Every address the app's own sources may be asked for. Embed pages that change often are allowed per playback instead.
 export function sourceAllowed(url: string, mirror: string) { return sourceURL(url, mirror) || !!trustedPlayerURL(url) || forteAllowed(url) || fuegoAllowed(url); }
-export function isProviderId(value: unknown): value is ProviderId { return typeof value === 'string' && value in policies; }
+export function isProviderId(value: unknown): value is ProviderId { return typeof value === 'string' && Object.prototype.hasOwnProperty.call(policies, value); }
 // Anything without a recognised provider keeps the original Pelisflix rules.
 export function mediaPolicy(id?: string): MediaPolicy { return policies[isProviderId(id) ? id : 'pelisflix']; }
 // Saved titles carry their source in the ID prefix. Older saves have no prefix of their own and belong to Pelisflix.

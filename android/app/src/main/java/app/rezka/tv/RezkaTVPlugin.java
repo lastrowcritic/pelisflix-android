@@ -139,7 +139,7 @@ public class RezkaTVPlugin extends Plugin {
         if(android.os.Build.VERSION.SDK_INT>=26&&!getContext().getPackageManager().canRequestPackageInstalls()){
             Intent settings=new Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,Uri.parse("package:"+getContext().getPackageName()));
             getActivity().runOnUiThread(()->{try{getActivity().startActivity(settings);}catch(Exception ignored){}});
-            call.reject("Allow Rezka to install unknown apps in the system settings, then choose Update again.","INSTALL_PERMISSION");return;
+            call.reject("Allow Pelisflix to install unknown apps in the system settings, then choose Update again.","INSTALL_PERMISSION");return;
         }
         requests.execute(()->{
             HttpURLConnection connection=null;java.io.File folder=new java.io.File(getContext().getCacheDir(),"updates"),apk=new java.io.File(folder,"Rezka-update.apk");
