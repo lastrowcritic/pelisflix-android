@@ -8,6 +8,8 @@ import { feedURL, fuegoCategories, fuegoDirect, fuegoGenres, parseFeed, parseFue
 import type { FeedEntry } from './fuegocine-parse';
 
 const pageSize = 30;
+// unlimplay sends its headers at once but holds the page back for up to about 16 seconds, longer than the usual wait.
+const slowPlayerWait = 45000;
 // The app asks for the same roots whichever source is used. Each root is a label on the blog.
 const rootLabels: Record<string, string> = { films: 'Movie', series: 'Serie', cartoons: 'Animación', animation: 'Animación' };
 
@@ -78,7 +80,7 @@ export class FuegocineProvider implements Provider {
     if (direct) return fuegoDirect(direct);
     if (fuegoOkruURL(url)) { const response = await this.host.request(url, undefined, page); return parseOkru(response.text, response.url); }
     if (fuegoUnlimplayURL(url)) {
-      const response = await this.host.request(url, undefined, page), voe = parseUnlimplay(response.text, response.url, audio);
+      const response = await this.host.request(url, undefined, page, slowPlayerWait), voe = parseUnlimplay(response.text, response.url, audio);
       return resolveVoe(this.host, voe, response.url, fuegoMedia);
     }
     if (fuegoVoeURL(url)) return resolveVoe(this.host, url, page, fuegoMedia);

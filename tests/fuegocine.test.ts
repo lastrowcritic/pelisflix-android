@@ -138,6 +138,16 @@ describe('Fuegocine players', () => {
     expect(() => parseUnlimplay(page.replace('https://voe.sx/e/' + voeId, 'https://evil.example/e/x'), url, 'latino')).toThrow('not supported');
     expect(() => parseUnlimplay(page, 'https://evil.example/play/embed/tv/1/1/1', 'latino')).toThrow('not supported');
   });
+  it('reads the unlimplay page that only lists its servers when the player is finished', () => {
+    // The same page comes back in two versions: the list in a variable, or an empty variable and the list in the closing call.
+    const page = text('unlimplay.html'), url = 'https://unlimplay.com/f/embed/movie/1302904', list = page.match(/const\s+EMBEDS\s*=\s*(\{[^\n]*\})\s*;/)![1];
+    const late = page.replace(/const\s+EMBEDS\s*=\s*\{[^\n]*\}\s*;/, 'const EMBEDS = [];') + `\n<script type="x-text/javascript">if(typeof finalizePlayer==="function"){finalizePlayer(${list});}</script>`;
+    expect(late).not.toMatch(/const\s+EMBEDS\s*=\s*\{/);
+    expect(parseUnlimplay(late, url, 'latino')).toBe('https://voe.sx/e/' + voeId);
+    expect(() => parseUnlimplay(late, url, 'castellano')).toThrow('selected audio');
+    expect(() => parseUnlimplay(late.replace('https://voe.sx/e/' + voeId, 'https://evil.example/e/x'), url, 'latino')).toThrow('not supported');
+    expect(() => parseUnlimplay(page.replace(/const\s+EMBEDS\s*=\s*\{[^\n]*\}\s*;/, 'const EMBEDS = [];'), url, 'latino')).toThrow('playable');
+  });
 });
 
 describe('Fuegocine address policy', () => {
@@ -193,11 +203,11 @@ describe('Fuegocine through the content source', () => {
     return data;
   }
   function network(options: { links?: Link[]; mp4Status?: number } = {}) {
-    const seen: { url: string; referer?: string }[] = [], posts = [moviePost(options.links).feed.entry[0], ...feed('series').entries, ...feed('episodes').entries].map((entry: FeedEntry) => ({ entry, path: new URL(entry.link!.find(l => l.rel === 'alternate')!.href).pathname }));
+    const seen: { url: string; referer?: string; timeout?: number }[] = [], posts = [moviePost(options.links).feed.entry[0], ...feed('series').entries, ...feed('episodes').entries].map((entry: FeedEntry) => ({ entry, path: new URL(entry.link!.find(l => l.rel === 'alternate')!.href).pathname }));
     const json = (value: unknown, final: string) => new Response(typeof value === 'string' ? value : JSON.stringify(value), { headers: { 'X-Rezka-URL': final } });
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const outer = new URL(String(input), 'http://localhost'), url = outer.searchParams.get('url')!, headers = new Headers(init?.headers);
-      seen.push({ url, referer: headers.get('X-Rezka-Referer') || outer.searchParams.get('referer') || undefined });
+      seen.push({ url, referer: headers.get('X-Rezka-Referer') || outer.searchParams.get('referer') || undefined, timeout: Number(headers.get('X-Rezka-Timeout')) || undefined });
       if (outer.pathname === '/api/content') {
         const address = new URL(url), page = (body: string, status = 200) => new Response(body, { status, headers: { 'X-Rezka-URL': url } });
         if (address.hostname === 'www.fuegocine.com' && address.pathname.startsWith('/feeds/posts/default')) {
@@ -301,6 +311,12 @@ describe('Fuegocine through the content source', () => {
     expect(player.referer).toBe(show.page);
     await expect(source.playback(detail, { translator: 'castellano', season: '1', episode: '3' })).rejects.toThrow('selected audio');
     await expect(source.playback(detail, { translator: 'latino', season: '2', episode: '1' })).rejects.toThrow('Choose a season');
+  });
+  it('waits long enough for the unlimplay page', async () => {
+    // unlimplay holds its page back for up to about 16 seconds before sending it, so the usual wait is not enough.
+    const { seen } = network(), source = new ContentSource(settings());
+    await source.playback(await source.details(show), { translator: 'latino', season: '1', episode: '3' });
+    expect(seen.find(r => new URL(r.url).hostname === 'unlimplay.com')!.timeout).toBeGreaterThanOrEqual(45000);
   });
   it('plays an ok.ru playlist with its own referrer', async () => {
     network({ links: [{ lang: 'lat', name: 'OK', url: 'https://ok.ru/videoembed/9630825187952' }] });

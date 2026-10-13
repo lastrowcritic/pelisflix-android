@@ -151,14 +151,19 @@ export function parseOkru(html: string, base: string): Source {
 }
 // unlimplay lists the same video on several hosts for each audio. Only the VOE one is used, because that player can be read safely.
 const audioKeys: Record<string, string[]> = { latino: ['latino'], castellano: ['español', 'espanol', 'castellano'], subtitulado: ['subtitulado'] };
+// The page comes back in two versions. One keeps the server list in a variable. The other leaves that variable empty and
+// only gives the list to the call that finishes the player, at the end of the page. Both are plain JSON, which is only read.
+const serverLists = [/const\s+EMBEDS\s*=\s*(\{[^\n]*\})\s*;/, /finalizePlayer\(\s*(\{[^\n]*\})\s*\)\s*;?\s*\}/];
 export function parseUnlimplay(html: string, base: string, audio: string): string {
   if (!fuegoUnlimplayURL(base)) throw new Error('This player is not supported.');
-  let embeds: Record<string, Record<string, unknown>> | undefined;
-  try { embeds = JSON.parse(html.match(/const\s+EMBEDS\s*=\s*(\{[^\n]*\})\s*;/)?.[1] || ''); } catch { /* Reported below. */ }
-  if (!embeds || typeof embeds !== 'object') throw new Error('This server did not provide a playable video.');
-  const key = (audioKeys[audio] || []).find(k => embeds![k] && typeof embeds![k] === 'object');
-  if (!key) throw new Error('This server does not have the selected audio.');
-  const voe = typeof embeds[key].voe === 'string' ? fuegoVoeURL(embeds[key].voe as string) : undefined;
+  const lists: Record<string, Record<string, unknown>>[] = [];
+  for (const reader of serverLists) {
+    try { const list = JSON.parse(html.match(reader)?.[1] || ''); if (list && typeof list === 'object') lists.push(list); } catch { /* The other place may have it. */ }
+  }
+  if (!lists.length) throw new Error('This server did not provide a playable video.');
+  const choices = lists.flatMap(list => { const key = (audioKeys[audio] || []).find(k => list[k] && typeof list[k] === 'object'); return key ? [list[key]] : []; });
+  if (!choices.length) throw new Error('This server does not have the selected audio.');
+  const voe = choices.map(choice => typeof choice.voe === 'string' ? fuegoVoeURL(choice.voe) : undefined).find(Boolean);
   if (!voe) throw new Error('This video server is not supported yet.');
   return voe;
 }
